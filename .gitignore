@@ -1,0 +1,18 @@
+# Java / Maven (Microservicios)
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+**/.idea/
+**/*.iml
+**/.settings/
+**/.classpath
+**/.project
+
+# Node / Angular (Frontend)
+**/node_modules/
+**/dist/
+**/.angular/
+**/.vscode/
+
+# Varios
+.DS_Store
+Thumbs.db

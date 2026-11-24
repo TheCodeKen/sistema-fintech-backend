@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<PasswordResetToken> findByToken(String token);
 
     List<PasswordResetToken> findAllByUsuarioAndUsadoFalse(Usuario usuario);

@@ -1,0 +1,176 @@
+/* Shared visual system: application, authentication, tables and dialogs. */
+:root {
+  --primary:#1464a5; --primary-d:#004481; --secondary:#526b83;
+  --bg:#f4f7fa; --card:#fff; --border:#e5edf3; --text:#072146;
+  --text-muted:#6c8299; --radius:12px; --shadow:none;
+}
+body {background:var(--bg)!important;color:var(--text);font-family:Inter,Arial,sans-serif;}
+app-root .main-content {background:var(--bg)!important;}
+app-root .main-content.with-nav {margin-left:232px;padding-top:0!important;min-height:calc(100vh - 62px);}
+app-root:has(app-navbar) .app-footer {margin-left:232px;}
+app-root .app-footer {background:var(--bg)!important;border-top:1px solid var(--border);font-size:11px;}
+app-root .page-container {max-width:1400px;padding:48px 48px 32px;}
+app-root h1 {font-size:28px!important;line-height:1.25;letter-spacing:-1px;color:var(--text)!important;font-weight:600!important;}
+app-root h2 {color:var(--text);letter-spacing:-.5px;font-weight:600;}
+app-root .page-container p {color:#6f7972;line-height:1.65;}
+app-root .mat-mdc-card {background:#fff!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:none!important;}
+app-root .toolbar,app-root .hero-card {padding:0 0 28px!important;border:0!important;background:transparent!important;box-shadow:none!important;}
+app-root .toolbar p {margin-top:7px;}
+app-root .toolbar {flex-direction:row!important;align-items:center!important;}
+app-root .filters {padding:18px 20px 0!important;gap:14px!important;background:#fff!important;}
+app-root .filters mat-form-field {flex:1;min-width:140px!important;max-width:260px;}
+app-root .table-card {padding:0!important;overflow:auto;}
+app-root table {font-size:13px;}
+app-root th,app-root .mat-mdc-header-cell {background:#f7fafd!important;font-size:10px!important;color:#6c8299!important;font-weight:600;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--border)!important;padding:18px!important;}
+app-root td,app-root .mat-mdc-cell {padding:17px 18px!important;border-bottom:1px solid #e9eff5!important;color:#244668;}
+app-root tr:hover td {background:#f7fafd!important;}
+app-root .pager {justify-content:space-between!important;padding:14px 20px!important;color:var(--text-muted);font-size:12px;border-top:1px solid var(--border);}
+app-root .status-badge,app-root .status-chip,app-root .badge,app-root .risk {border-radius:5px!important;font-size:10px!important;font-weight:600!important;letter-spacing:.3px;padding:5px 8px!important;box-shadow:none!important;}
+app-root .mat-mdc-raised-button.mat-primary,.cdk-overlay-container .mat-mdc-raised-button.mat-primary {background:#1464a5!important;color:#fff!important;box-shadow:none!important;}
+app-root .mat-mdc-button-base,.cdk-overlay-container .mat-mdc-button-base {border-radius:7px!important;font-size:12px;letter-spacing:0;}
+app-root .mat-mdc-outlined-button {border-color:#dbe5ee!important;color:#1464a5!important;}
+.mat-mdc-form-field {--mdc-outlined-text-field-focus-outline-color:#1464a5;--mdc-outlined-text-field-focus-label-text-color:#1464a5;--mdc-outlined-text-field-outline-color:#dbe5ee;--mdc-outlined-text-field-container-shape:8px;--mat-form-field-container-text-size:14px;}
+.mat-mdc-form-field-hint-wrapper {font-size:11px;color:#78837a;}
+.cdk-overlay-backdrop.cdk-overlay-dark-backdrop {background:rgba(25,39,31,.3);backdrop-filter:blur(3px);}
+.mat-mdc-dialog-surface {border-radius:16px!important;box-shadow:0 24px 90px rgba(28,44,34,.15)!important;}
+.mat-mdc-dialog-title {font-size:22px!important;letter-spacing:-.7px;font-weight:600!important;padding:28px 28px 8px!important;}
+.mat-mdc-dialog-content {padding:12px 28px 24px!important;}
+.mat-mdc-dialog-actions {padding:16px 28px 22px!important;border-top:1px solid #e9eff5;gap:8px;}
+.cdk-overlay-container .form {display:grid!important;gap:12px!important;min-width:0!important;}
+.field-grid {display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-intro {font-size:13px!important;line-height:1.7!important;color:#748078!important;margin:0 0 10px!important;}
+.form-note {padding:12px 14px;background:#edf5fc;border-radius:8px;color:#52708e;font-size:12px;line-height:1.65;}
+.form-feedback {padding:12px 14px;background:#fff4ef;color:#a7442d;border:1px solid #f2d9cd;border-radius:8px;font-size:12px;line-height:1.6;}
+.review-summary {display:grid;gap:20px;padding:12px 0;}
+.eyebrow {font-size:10px;font-weight:600;letter-spacing:1.8px;color:#7a867b;}
+.review-amount {font-size:34px;font-weight:500;letter-spacing:-1.5px;color:#072146;}
+.review-summary dl {display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;}
+.review-summary dt {color:#7c857d;}.review-summary dd {text-align:right;margin:0;color:#072146;overflow-wrap:anywhere;}
+/* A quiet, persistent desktop navigation rail. */
+app-root app-navbar .navbar {width:232px;right:auto;bottom:0;height:100vh!important;height:100dvh!important;flex-direction:column;flex-wrap:nowrap;align-items:stretch;padding:36px 20px!important;gap:42px;background:#fff!important;border-right:1px solid var(--border);border-bottom:0;box-shadow:none!important;}
+app-root app-navbar .navbar-brand {gap:10px;padding:0 10px;flex-shrink:0;}
+app-root app-navbar .logo-mark {background:#1464a5!important;width:33px;height:33px;border-radius:9px!important;}
+app-root app-navbar .logo-text {font-size:17px!important;letter-spacing:-.7px;color:#072146!important;}
+app-root app-navbar .logo-accent {color:#072146!important;}
+app-root app-navbar .logo-copy small {font-size:10px!important;margin-top:5px;color:#8b948b;}
+app-root app-navbar .navbar-links {display:flex;flex-direction:column;align-items:stretch;gap:5px;flex:1;min-height:0;min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#456283 transparent;}
+app-root app-navbar .navbar-links::-webkit-scrollbar {width:4px;height:4px;}
+app-root app-navbar .navbar-links::-webkit-scrollbar-track {background:transparent;}
+app-root app-navbar .navbar-links::-webkit-scrollbar-thumb {background:#456283;border-radius:8px;}
+app-root app-navbar .navbar-links::-webkit-scrollbar-thumb:hover {background:#8eafcb;}
+app-root app-navbar .navbar-links a {flex-shrink:0;}
+app-root app-navbar .navbar-links a {justify-content:flex-start;padding:10px 14px!important;border-radius:7px!important;color:#7b857d!important;font-size:12px;font-weight:500;}
+app-root app-navbar .navbar-links a.active {background:#eaf3fb!important;color:#1464a5!important;}
+app-root app-navbar .navbar-links a:hover {background:#f4f8fc!important;}
+app-root app-navbar .navbar-user {flex-wrap:wrap;flex-shrink:0;margin:0;padding:18px 10px 0;border-top:1px solid var(--border);gap:10px;}
+app-root app-navbar .user-meta {text-align:left;width:100%;}.navbar-user .badge {display:none;}
+app-root app-navbar .user-name {font-size:12px;}.navbar-user .user-role {font-size:10px;color:#919990;}
+app-root app-navbar .logout-btn {width:100%;margin-top:4px;}
+/* Authentication remains spacious on desktop and focused on mobile. */
+app-root .auth-shell {background:var(--bg)!important;max-width:1120px;margin:0 auto;padding:76px 40px!important;gap:80px!important;min-height:calc(100vh - 64px)!important;}
+app-root .auth-visual {background:transparent!important;border:0!important;box-shadow:none!important;padding:36px 0!important;color:#072146!important;}
+app-root .auth-visual::before,app-root .auth-visual::after {display:none!important;}
+app-root .auth-visual h1 {font-size:46px!important;line-height:1.15;letter-spacing:-2px;white-space:pre-line;max-width:420px;}
+app-root .auth-visual p {color:#7d877e!important;font-size:14px!important;line-height:1.8;max-width:340px;}
+app-root .auth-visual-badge {background:#eaf3fb!important;color:#1464a5!important;border:0!important;border-radius:5px!important;font-size:11px!important;}
+app-root .auth-card {padding:32px!important;border-radius:14px!important;max-width:440px;}
+app-root .brand-mark {background:#eaf3fb!important;color:#1464a5!important;border-radius:10px!important;box-shadow:none!important;}
+app-root .auth-brand h2 span {color:#1464a5!important;}
+app-root .auth-button {background:#1464a5!important;border-radius:8px!important;box-shadow:none!important;}
+app-root .forgot-link,app-root .password-link {color:#1464a5!important;font-size:12px!important;}
+app-root .auth-footnote {background:transparent!important;border-top:1px solid var(--border);color:#8b948c!important;}
+app-root .password-shell {background:var(--bg)!important;min-height:calc(100vh - 62px)!important;padding:64px 20px!important;}
+app-root .password-card {padding:32px!important;border-radius:14px!important;max-width:480px;}
+app-root .password-icon {background:#eaf3fb!important;color:#1464a5!important;box-shadow:none!important;border-radius:10px!important;}
+app-root .password-eyebrow {color:#1464a5!important;letter-spacing:1px;font-size:10px!important;}
+app-root .password-header h1 {font-size:26px!important;}
+app-root .password-button {background:#1464a5!important;border-radius:8px!important;box-shadow:none!important;}
+/* Shared dashboard and lending surfaces. */
+app-root .welcome-banner {background:transparent!important;box-shadow:none!important;border:0!important;padding:0 0 12px!important;}
+app-root .welcome-banner {align-items:flex-start!important;text-align:left!important;}
+app-root .welcome-pill {background:#eaf3fb!important;color:#1464a5!important;border-radius:5px!important;font-size:10px!important;letter-spacing:1px!important;}
+app-root .card h2,app-root .quick-section h2 {color:#072146!important;font-weight:600!important;}
+app-root .card>a {color:#1464a5!important;font-size:12px;display:inline-block;margin-top:14px;text-decoration:none;}
+app-root .quick-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+app-root .quick-item {min-height:78px;}
+app-root app-navbar .navbar-links a .mdc-button__label {width:100%;text-align:left;}
+app-root app-navbar .user-meta {text-align:left!important;}
+app-root .kpi-card {padding:24px!important;box-shadow:none!important;align-items:flex-start!important;}
+app-root .kpi-value {font-size:28px!important;font-weight:500!important;letter-spacing:-1px;}
+app-root .kpi-icon {background:#eaf3fb!important;color:#1464a5!important;border-radius:10px!important;}
+app-root .quick-section,app-root .notice-card,app-root .preview-card {box-shadow:none!important;background:#fff!important;border-color:var(--border)!important;}
+app-root .quick-item {border:1px solid var(--border)!important;background:#fff!important;border-radius:9px!important;box-shadow:none!important;}
+app-root .quick-item mat-icon {color:#1464a5!important;}
+app-root .hero-icon,app-root .notice-card>mat-icon {background:#eaf3fb!important;color:#1464a5!important;}
+app-root .hero-kicker,app-root .preview-label {color:#7c8a7d!important;font-size:10px!important;letter-spacing:1px;}
+app-root .summary-card {background:#fff!important;box-shadow:none!important;border:1px solid var(--border)!important;border-radius:10px!important;}
+app-root .notice-card {padding:16px 20px!important;font-size:12px;}
+app-root .dialog-content .dialog-grid {gap:16px!important;}
+@media(max-width:1050px) {
+  app-root app-navbar .navbar {width:100%;height:auto!important;bottom:auto;right:0;flex-direction:row;flex-wrap:wrap;gap:12px;padding:15px 20px!important;border-right:0;border-bottom:1px solid var(--border);}
+  app-root app-navbar .navbar-links {order:3;flex:none!important;flex-basis:100%!important;flex-direction:row;width:100%;overflow-x:auto;overflow-y:hidden;gap:2px;}
+  app-root app-navbar .navbar-links a {white-space:nowrap;padding:7px 10px!important;}
+  app-root app-navbar .navbar-user {margin-left:auto;padding:0;border:0;width:auto;}.navbar-user .user-meta {display:none!important;}
+  app-root app-navbar .logout-btn {margin:0;width:auto;}
+  app-root .main-content.with-nav {margin-left:0;padding-top:126px!important;}
+  app-root:has(app-navbar) .app-footer {margin-left:0;}
+  app-root .page-container {padding:28px 22px;}
+}
+@media(max-width:700px) {
+  app-root h1 {font-size:24px!important;}app-root .toolbar,app-root .hero-card {align-items:flex-start!important;gap:18px!important;flex-direction:column!important;}
+  app-root .auth-shell {display:block!important;padding:30px 18px!important;}.auth-visual {display:none!important;}app-root .auth-card {margin:0 auto;padding:26px!important;}
+  .field-grid {grid-template-columns:1fr;gap:0;}
+  app-root .quick-grid {grid-template-columns:1fr;}
+  app-root .kpi-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+  app-root .kpi-card {padding:16px!important;}app-root .kpi-value {font-size:22px!important;}
+  .mat-mdc-dialog-content {padding:12px 20px 20px!important;}.mat-mdc-dialog-title {padding:24px 20px 8px!important;}
+  .mat-mdc-dialog-actions {padding:14px 20px!important;}
+}
+@media(prefers-reduced-motion:reduce) {*,*::before,*::after {animation:none!important;transition:none!important;}}
+
+/* Blue banking palette and compact progressive filters. */
+app-root app-navbar .navbar {background:#072146!important;border-color:#072146!important;}
+app-root app-navbar .logo-text,app-root app-navbar .logo-accent,app-root app-navbar .user-name {color:#fff!important;}
+app-root app-navbar .logo-copy small,app-root app-navbar .user-role {color:#a8c0d8!important;}
+app-root app-navbar .logo-mark {background:#1464a5!important;}
+app-root app-navbar .navbar-links a {color:#b8cfe4!important;}
+app-root app-navbar .navbar-links a.active {background:#004481!important;color:#fff!important;}
+app-root app-navbar .navbar-links a:hover {background:#0c315d!important;color:#fff!important;}
+app-root app-navbar .logout-btn {color:#fff!important;border-color:#456283!important;}
+app-root app-navbar .navbar-user {border-color:#28486d!important;}
+app-root .mat-mdc-card {border-radius:8px!important;}
+app-root .filter-shell {background:transparent;margin:0 0 22px;border-bottom:1px solid #e1eaf2;padding:0 0 16px;}
+.filter-shell form {margin:0;width:100%;}
+.filter-line {display:flex;align-items:center;gap:12px;min-height:44px;}
+.filter-search {display:flex;align-items:center;gap:10px;flex:1;max-width:460px;min-width:180px;background:#fff;border:1px solid #dce7f0;border-radius:6px;padding:0 14px;height:44px;}
+.filter-search:focus-within {border-color:#1464a5;box-shadow:0 0 0 2px #1464a514;}
+.filter-search mat-icon {color:#6c8ba8;font-size:20px;width:20px;height:20px;flex-shrink:0;}
+.filter-search input {width:100%;border:0;background:transparent;outline:none;font:inherit;font-size:13px;color:#072146;height:100%;min-width:0;}
+.filter-search input::placeholder {color:#7e94a9;}
+.filter-line button {height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 14px;border-radius:5px;cursor:pointer;font:inherit;font-size:12px;font-weight:500;white-space:nowrap;}
+.filter-toggle {background:transparent;border:1px solid #dce7f0;color:#1464a5;}
+.filter-toggle[aria-expanded=true] {background:#eaf3fb;border-color:#a4c4df;}
+.filter-toggle mat-icon {font-size:17px;width:17px;height:17px;}
+.filter-apply {background:#1464a5;border:1px solid #1464a5;color:#fff;}
+.filter-apply:hover {background:#004481;}
+.filter-clear {background:transparent;border:0;color:#6c8299;text-decoration:underline;text-underline-offset:3px;}
+.filter-count {display:inline-grid;place-items:center;min-width:18px;height:18px;background:#e1edf8;color:#004481;border-radius:4px;font-size:10px;}
+.filter-details {display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px;padding:20px 0 4px;max-width:900px;}
+.filter-details label,.filter-primary-select {display:flex;flex-direction:column;gap:7px;font-size:11px;color:#6c8299;}
+.filter-details input,.filter-details select,.filter-primary-select select {height:40px;min-width:0;width:100%;border:1px solid #dce7f0;background:#fff;border-radius:5px;padding:0 10px;font:inherit;font-size:12px;color:#244668;}
+.filter-primary-select {min-width:220px;max-width:340px;flex:1;}
+.filter-validation {font-size:12px!important;color:#b44838!important;margin-top:12px;}
+.filter-shell button:focus-visible,.filter-details input:focus-visible,.filter-details select:focus-visible {outline:2px solid #2dcccd;outline-offset:3px;}
+app-root app-alertas .page,app-root app-auditoria .page {max-width:1400px;margin:0 auto;padding:48px;}
+app-root .hero {padding:0 0 28px!important;background:transparent!important;border:0!important;box-shadow:none!important;align-items:flex-start!important;}
+@media(max-width:700px){
+ app-root .table-card table {min-width:720px;}
+ .filter-line {flex-wrap:wrap;gap:9px;}
+ .filter-search {flex-basis:100%;max-width:none;}
+ .filter-details {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+ .filter-primary-select {flex-basis:100%;max-width:none;}
+ app-root app-alertas .page,app-root app-auditoria .page {padding:28px 22px;}
+}
+.filter-no-results {text-align:center!important;padding:36px!important;color:#6c8299!important;font-size:13px;}
+app-root app-navbar .notification-bell{display:flex;align-items:center;gap:9px;width:100%;padding:10px 0;color:#b8cfe4;text-decoration:none;font-size:12px;position:relative}app-root app-navbar .notification-bell.active{color:#fff}app-root app-navbar .notification-bell mat-icon{font-size:21px;width:21px;height:21px}.notification-count{background:#1464a5;color:white;font-size:10px;border-radius:8px;padding:2px 6px;margin-left:auto}.notification-bell:focus-visible{outline:2px solid #2dcccd;outline-offset:3px}@media(max-width:1050px){app-root app-navbar .notification-bell{width:34px;min-width:34px;height:34px;padding:0;justify-content:center}app-root app-navbar .notification-label{display:none}.notification-count{position:absolute;right:-5px;top:-2px;margin:0;font-size:9px;padding:1px 4px}}
+.assistant-dialog .mat-mdc-dialog-surface{border-radius:0!important;overflow:hidden!important;padding:0!important}.assistant-dialog h2{color:#072146!important}.assistant-dialog{margin:0!important}

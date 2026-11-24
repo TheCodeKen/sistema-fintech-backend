@@ -1,0 +1,38 @@
+[
+  {
+    "file": "FinTechPro_Tomo_01.pdf",
+    "pages": 13,
+    "bytes": 122099,
+    "sha256": "63897f317f602bd4e7822c4c1b6a62c3b06f0402d72fb2a9e8931ec13c8028e2"
+  },
+  {
+    "file": "FinTechPro_Tomo_02.pdf",
+    "pages": 16,
+    "bytes": 136206,
+    "sha256": "9dc3ea5e775f1025130b648e8875e952f5862b930c080c6d65633a463dcc4cb1"
+  },
+  {
+    "file": "FinTechPro_Tomo_03.pdf",
+    "pages": 12,
+    "bytes": 124381,
+    "sha256": "481c87594af4255ff5cb60e941da911bf816038b07cb560f799562f0c3af01b2"
+  },
+  {
+    "file": "FinTechPro_Tomo_04.pdf",
+    "pages": 13,
+    "bytes": 127426,
+    "sha256": "43609df4d4cb587c37f94a9e855d78dad1833245ea894d8af286b87c5e51f45f"
+  },
+  {
+    "file": "FinTechPro_Tomo_05.pdf",
+    "pages": 98,
+    "bytes": 298772,
+    "sha256": "c4d1a43cd2f697c285119bcbadeabc369bbd4d3a95e3cc3bbe738749e2a5eaa8"
+  },
+  {
+    "file": "FinTechPro_Manual_Completo.pdf",
+    "pages": 152,
+    "bytes": 810832,
+    "sha256": "d38df7de854073936701d4837874c2b4b8fc86db6ce51b591592e5f99317f60c"
+  }
+]

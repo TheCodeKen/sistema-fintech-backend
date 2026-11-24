@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -32,8 +34,19 @@ public class UsuarioController {
 
     // ── GET /api/usuarios  (solo ADMIN vía SecurityConfig) ────────────────
     @GetMapping
-    public ResponseEntity<List<UsuarioResponse>> listarTodos() {
-        return ResponseEntity.ok(usuarioService.listarTodos());
+    public ResponseEntity<Page<UsuarioResponse>> listarTodos(
+            @RequestParam(required = false) String rol,
+            @RequestParam(required = false) Boolean estado,
+            @RequestParam(required = false) String busqueda,
+            @PageableDefault(size = 10, sort = "apellido") Pageable pageable) {
+        return ResponseEntity.ok(usuarioService.listarTodos(parseRol(rol), estado, busqueda, pageable));
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<UsuarioResponse> cambiarEstado(
+            @PathVariable Long id,
+            @RequestParam boolean activo) {
+        return ResponseEntity.ok(usuarioService.cambiarEstado(id, activo));
     }
 
     // ── GET /api/usuarios/{id}  (solo ADMIN) ──────────────────────────────
@@ -61,5 +74,15 @@ public class UsuarioController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         usuarioService.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private com.fintech.msusuarios.entity.Usuario.Rol parseRol(String rol) {
+        if (rol == null || rol.isBlank()) return null;
+        try {
+            return com.fintech.msusuarios.entity.Usuario.Rol.valueOf(rol.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Rol inválido: " + rol);
+        }
     }
 }

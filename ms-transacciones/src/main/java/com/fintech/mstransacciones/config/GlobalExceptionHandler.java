@@ -35,4 +35,27 @@ public class GlobalExceptionHandler {
         body.put("message", errors);
         return ResponseEntity.badRequest().body(body);
     }
+
+    @ExceptionHandler({java.time.format.DateTimeParseException.class,
+            org.springframework.web.bind.MissingRequestHeaderException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String,Object>> entrada(Exception ex) {
+        return ResponseEntity.badRequest().body(Map.of("status",400,"message","Entrada inválida; revise tipos, fechas y formato"));
+    }
+    @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,
+            org.springframework.dao.ConcurrencyFailureException.class})
+    public ResponseEntity<Map<String,Object>> conflicto(Exception ex) {
+        return ResponseEntity.status(409).body(Map.of("status",409,"message","Conflicto de datos; consulte el estado y reintente la misma operación"));
+    }
+    @ExceptionHandler(feign.FeignException.class)
+    public ResponseEntity<Map<String,Object>> remoto(feign.FeignException ex) {
+        int code=ex.status()>=400 && ex.status()<500 ? ex.status() : 503;
+        return ResponseEntity.status(code).body(Map.of("status",code,"message","No se pudo completar la operación con el servicio requerido"));
+    }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String,Object>> inesperado(Exception ex) {
+        org.slf4j.LoggerFactory.getLogger(getClass()).error("Error no controlado",ex);
+        return ResponseEntity.status(500).body(Map.of("status",500,"message","Error interno del servidor"));
+    }
 }

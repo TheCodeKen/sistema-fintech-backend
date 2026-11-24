@@ -1,10 +1,16 @@
-import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { solicitarConfirmacion } from '../../components/confirmation-dialog.component';
+import { UsuarioService } from '../../services/usuario.service';
+import { importeValido } from '../../models/form-rules';
+import { SolicitudPendienteService } from '../../services/solicitud-pendiente.service';
+import { Subscription, timeout } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { Component, OnInit, OnDestroy, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrestamoService } from '../../services/prestamo.service';
 import { CuentaService } from '../../services/cuenta.service';
 import { AuthService } from '../../services/auth.service';
-import { Prestamo, Cuenta } from '../../models/models';
+import { Prestamo, Cuenta, Usuario } from '../../models/models';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -23,6 +29,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     FormsModule,
     MatButtonModule,
     MatCardModule,
@@ -44,14 +51,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           <div class="eyebrow">Banca digital</div>
           <h1>{{ isAdmin ? 'Gestión de Préstamos' : 'Mis Préstamos' }}</h1>
           <p>
-            Seguimiento claro de solicitudes, aprobaciones y desembolsos con una experiencia más limpia,
-            consistente y profesional.
+            Consulta tus solicitudes, cronogramas y pagos en un solo lugar.
           </p>
         </div>
         <div class="hero-actions">
           <button mat-raised-button color="primary" (click)="abrirModal()">
             <mat-icon>add</mat-icon>
-            {{ isAdmin ? 'Nuevo préstamo' : 'Solicitar préstamo' }}
+            {{ tieneSolicitudPendiente ? 'Retomar solicitud' : isAdmin ? 'Nuevo préstamo' : 'Solicitar préstamo' }}
           </button>
         </div>
       </mat-card>
@@ -69,18 +75,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         </mat-card>
         <mat-card class="kpi-card soft-emerald">
           <div class="kpi-label">Monto solicitado</div>
-          <div class="kpi-value">{{ monedaPrincipal }} {{ montoSolicitadoTotal | number:'1.2-2' }}</div>
-          <div class="kpi-hint">Acumulado de la cartera</div>
+          <div class="kpi-value">PEN {{ montoPen | number:'1.2-2' }}</div>
+          <div class="kpi-hint">USD {{ montoUsd | number:'1.2-2' }} · Registros de esta página</div>
         </mat-card>
       </div>
 
       <mat-card class="notice-card admin-notice" *ngIf="isAdmin">
         <mat-icon>link</mat-icon>
         <div>
-          <strong>FeignClient activo</strong>
+          <strong>Solicitud verificada</strong>
           <p>
-            Al crear un préstamo, ms-prestamos consulta ms-usuarios y ms-cuentas para validar usuario activo,
-            cuenta activa y pertenencia.
+            Elige al cliente y una de sus cuentas activas. La moneda se completa automáticamente.
           </p>
         </div>
       </mat-card>
@@ -90,7 +95,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         <div>
           <strong>Solicitud guiada</strong>
           <p>
-            Puedes solicitar préstamos personales, vehiculares y más con una interfaz más clara y orientada a completar el flujo sin fricción.
+            Abre el detalle de una solicitud para ver sus cuotas, registrar pagos o cancelarla antes de la aprobación.
           </p>
         </div>
       </mat-card>
@@ -99,7 +104,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         <div class="table-header">
           <div>
             <h2>Listado de préstamos</h2>
-            <p>Vista responsive con acciones más accesibles y jerarquía visual más clara.</p>
+            <p>Consulta el cronograma y el historial de cada préstamo.</p>
           </div>
           <button mat-stroked-button color="primary" (click)="cargarPrestamos()">
             <mat-icon>refresh</mat-icon>
@@ -179,32 +184,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let p">
+                <a mat-button color="primary" [routerLink]="['/prestamos',p.id]" [attr.aria-label]="(isAdmin && ['PENDIENTE','EN_REVISION'].includes(p.estado || '') ? 'Evaluar solicitud ' : 'Ver detalle de ')+p.numeroPrestamo">{{isAdmin && ['PENDIENTE','EN_REVISION'].includes(p.estado || '') ? 'Evaluar solicitud' : 'Ver detalle'}}</a>
                 <div class="actions-cell" *ngIf="isAdmin; else clienteActions">
-                  <button
-                    *ngIf="p.estado === 'PENDIENTE'"
-                    mat-icon-button
-                    color="primary"
-                    matTooltip="Aprobar préstamo"
-                    (click)="aprobarPrestamo(p.id!)">
-                    <mat-icon>task_alt</mat-icon>
-                  </button>
-                  <button mat-icon-button color="primary" matTooltip="Editar préstamo" (click)="editarPrestamo(p)">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" matTooltip="Eliminar préstamo" (click)="eliminarPrestamo(p.id!)">
-                    <mat-icon>delete</mat-icon>
+                  <button *ngIf="p.estado === 'APROBADO'" mat-icon-button color="primary" matTooltip="Desembolsar préstamo" (click)="desembolsarPrestamo(p.id!)">
+                    <mat-icon>payments</mat-icon>
                   </button>
                 </div>
                 <ng-template #clienteActions>
                   <div class="actions-cell">
-                    <button
-                      *ngIf="p.estado === 'PENDIENTE'"
-                      mat-stroked-button
-                      color="warn"
-                      (click)="eliminarPrestamo(p.id!)">
-                      Cancelar
-                    </button>
-                    <span *ngIf="p.estado !== 'PENDIENTE'" class="muted-action">Sin acciones disponibles</span>
+                    <span *ngIf="p.estado === 'VENCIDO'" class="muted-action">Cuotas por regularizar</span>
                   </div>
                 </ng-template>
               </td>
@@ -213,52 +201,45 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
+          <div *ngIf="isAdmin && !loading && !errorLista" class="actions-cell">
+            <button mat-button [disabled]="pagina===0" (click)="cambiarPagina(-1)">Anterior</button>
+            <span>Página {{pagina+1}} de {{totalPaginas || 1}}</span>
+            <button mat-button [disabled]="pagina+1>=totalPaginas" (click)="cambiarPagina(1)">Siguiente</button>
+          </div>
 
           <div class="loading-overlay" *ngIf="loading">
             <mat-progress-spinner diameter="42" mode="indeterminate"></mat-progress-spinner>
             <span>Cargando préstamos...</span>
           </div>
 
-          <div class="empty-state" *ngIf="!loading && prestamos.length === 0">
+          <div role="alert" class="form-feedback" *ngIf="errorLista">{{errorLista}} <button mat-button (click)="cargarPrestamos()">Reintentar</button></div>
+          <div class="empty-state" *ngIf="!loading && !errorLista && prestamos.length === 0">
             <mat-icon>account_balance_wallet</mat-icon>
             <h3>{{ isAdmin ? 'No hay préstamos registrados' : 'No tienes préstamos solicitados' }}</h3>
-            <p>Cuando existan registros, se mostrarán aquí con una vista más limpia y legible.</p>
+            <p>{{isAdmin ? 'Las solicitudes de los clientes aparecerán aquí para su evaluación.' : 'Puedes iniciar una solicitud cuando tengas una cuenta activa.'}}</p>
           </div>
         </div>
       </mat-card>
     </div>
 
     <ng-template #loanDialog>
-      <h2 mat-dialog-title>{{ modoEdicion ? 'Editar préstamo' : (isAdmin ? 'Nuevo préstamo' : 'Solicitar préstamo') }}</h2>
+      <h2 mat-dialog-title>{{ revisandoSolicitud ? 'Revisa tu solicitud' : isAdmin ? 'Nuevo préstamo' : 'Solicitar préstamo' }}</h2>
       <mat-dialog-content class="dialog-content">
         <form #prestamoForm="ngForm" class="dialog-form">
+          <div *ngIf="formError" class="form-feedback" role="alert">{{formError}}</div>
         
 
-        <div class="dialog-grid">
-          <mat-form-field appearance="outline" *ngIf="isAdmin">
-            <mat-label>ID Usuario</mat-label>
-            <input matInput type="number" [(ngModel)]="form.usuarioId" name="usuarioId" placeholder="1" required min="1" #usuarioIdModel="ngModel" />
-            <mat-error *ngIf="usuarioIdModel.invalid && (usuarioIdModel.dirty || usuarioIdModel.touched)">Ingrese un ID válido mayor que 0.</mat-error>
+        <div class="dialog-grid" *ngIf="!revisandoSolicitud">
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic" *ngIf="isAdmin"><mat-label>Cliente</mat-label>
+            <mat-select [(ngModel)]="form.usuarioId" name="usuarioId" required (selectionChange)="cambiarCliente()"><mat-option *ngFor="let c of clientes" [value]="c.id">{{c.nombre}} {{c.apellido}} · {{c.email}}</mat-option></mat-select>
           </mat-form-field>
-
-          <mat-form-field appearance="outline" *ngIf="isAdmin">
-            <mat-label>ID Cuenta Desembolso</mat-label>
-            <input matInput type="number" [(ngModel)]="form.cuentaDesembolsoId" name="cuentaDesembolsoId" placeholder="1" required min="1" #cuentaDesembolsoAdminModel="ngModel" />
-            <mat-error *ngIf="cuentaDesembolsoAdminModel.invalid && (cuentaDesembolsoAdminModel.dirty || cuentaDesembolsoAdminModel.touched)">Ingrese un ID válido mayor que 0.</mat-error>
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic"><mat-label>Cuenta de desembolso</mat-label>
+            <mat-select [(ngModel)]="form.cuentaDesembolsoId" name="cuentaDesembolsoId" required [disabled]="cargandoCuentas || !misCuentas.length" (selectionChange)="cambiarCuenta()"><mat-option *ngFor="let c of misCuentas" [value]="c.id">{{c.numeroCuenta}} · {{c.moneda}}</mat-option></mat-select>
+            <mat-hint>{{cargandoCuentas ? 'Cargando cuentas…' : 'Solo cuentas activas del titular.'}}</mat-hint>
           </mat-form-field>
-
-          <mat-form-field appearance="outline" [class.full-width]="!isAdmin" *ngIf="!isAdmin">
-            <mat-label>Cuenta de desembolso</mat-label>
-            <mat-select [(ngModel)]="form.cuentaDesembolsoId" name="cuentaDesembolsoId" required #cuentaDesembolsoClientModel="ngModel">
-              <mat-option [value]="0" disabled>Selecciona una cuenta</mat-option>
-              <mat-option *ngFor="let c of misCuentas" [value]="c.id">
-                {{ c.numeroCuenta }} · {{ c.tipoCuenta }} · {{ c.moneda }} {{ c.saldo | number:'1.2-2' }}
-              </mat-option>
-            </mat-select>
-            <mat-error *ngIf="cuentaDesembolsoClientModel.invalid && (cuentaDesembolsoClientModel.dirty || cuentaDesembolsoClientModel.touched)">Seleccione una cuenta de desembolso.</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
+          <p class="form-note" *ngIf="!cargandoCuentas && !misCuentas.length">{{isAdmin ? 'Selecciona un cliente con una cuenta activa para continuar.' : 'Necesitas una cuenta activa para recibir el desembolso.'}}</p>
+          <button mat-button type="button" [disabled]="cargandoCuentas || !form.usuarioId" (click)="actualizarCuentasSolicitud()">Actualizar cuentas</button>
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic">
             <mat-label>Tipo de préstamo</mat-label>
             <mat-select [(ngModel)]="form.tipoPrestamo" name="tipoPrestamo" required #tipoPrestamoModel="ngModel">
               <mat-option value="PERSONAL">PERSONAL</mat-option>
@@ -270,55 +251,86 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             <mat-error *ngIf="tipoPrestamoModel.invalid && (tipoPrestamoModel.dirty || tipoPrestamoModel.touched)">Seleccione un tipo de préstamo.</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic">
             <mat-label>Moneda</mat-label>
-            <mat-select [(ngModel)]="form.moneda" name="moneda" required #monedaModel="ngModel">
+            <mat-select [(ngModel)]="form.moneda" name="moneda" required #monedaModel="ngModel" [disabled]="true">
               <mat-option value="PEN">PEN - Soles</mat-option>
               <mat-option value="USD">USD - Dólares</mat-option>
             </mat-select>
             <mat-error *ngIf="monedaModel.invalid && (monedaModel.dirty || monedaModel.touched)">Seleccione una moneda.</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic">
             <mat-label>Monto solicitado</mat-label>
-            <input matInput type="number" [(ngModel)]="form.montoSolicitado" name="montoSolicitado" placeholder="5000.00" step="100" required min="100" #montoSolicitadoModel="ngModel" />
-            <mat-error *ngIf="montoSolicitadoModel.invalid && (montoSolicitadoModel.dirty || montoSolicitadoModel.touched)">El monto debe ser mayor o igual a 100.</mat-error>
+            <input matInput type="number" inputmode="decimal" [(ngModel)]="form.montoSolicitado" name="montoSolicitado" placeholder="5000.00" step="0.01" required min="500" max="9999999999999.99" [pattern]="patronDecimal" #montoSolicitadoModel="ngModel" />
+            <mat-hint>Mínimo 500 en la moneda de la cuenta.</mat-hint>
+            <mat-error *ngIf="montoSolicitadoModel.invalid">Ingresa entre 500 y 9,999,999,999,999.99, con hasta 2 decimales.</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic">
             <mat-label>Tasa de interés anual (%)</mat-label>
-            <input matInput type="number" [(ngModel)]="form.tasaInteres" name="tasaInteres" placeholder="18.00" step="0.5" required min="0" max="100" [readonly]="!isAdmin" #tasaInteresModel="ngModel" />
-            <mat-error *ngIf="tasaInteresModel.invalid && (tasaInteresModel.dirty || tasaInteresModel.touched)">La tasa debe estar entre 0 y 100.</mat-error>
+            <input matInput type="number" inputmode="decimal" [(ngModel)]="form.tasaInteres" name="tasaInteres" placeholder="18.00" step="0.01" required min="1" max="100" [pattern]="patronDecimal" [readonly]="!isAdmin" #tasaInteresModel="ngModel" />
+            <mat-hint *ngIf="!isAdmin">Tasa vigente: 18 % anual.</mat-hint>
+            <mat-error *ngIf="tasaInteresModel.invalid">Usa una tasa de 1 a 100 %, con hasta 2 decimales.</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline" floatLabel="always" subscriptSizing="dynamic" class="full-width">
             <mat-label>Plazo en meses</mat-label>
-            <input matInput type="number" [(ngModel)]="form.plazoMeses" name="plazoMeses" placeholder="12" min="3" max="360" required #plazoMesesModel="ngModel" />
-            <mat-error *ngIf="plazoMesesModel.invalid && (plazoMesesModel.dirty || plazoMesesModel.touched)">El plazo debe estar entre 3 y 360 meses.</mat-error>
+            <input matInput type="number" inputmode="numeric" [(ngModel)]="form.plazoMeses" name="plazoMeses" placeholder="12" min="3" max="360" step="1" pattern="[0-9]+" required #plazoMesesModel="ngModel" />
+            <mat-error *ngIf="plazoMesesModel.invalid">Ingresa un número entero de 3 a 360 meses.</mat-error>
           </mat-form-field>
         </div>
 
-        <mat-card class="preview-card" *ngIf="form.montoSolicitado && form.tasaInteres && form.plazoMeses">
+        <div class="review-summary" *ngIf="revisandoSolicitud">
+          <strong class="review-amount">{{form.moneda}} {{form.montoSolicitado | number:'1.2-2'}}</strong>
+          <dl><dt>Cuenta de desembolso</dt><dd>{{form.numeroCuenta}}</dd><dt>Tipo</dt><dd>{{form.tipoPrestamo}}</dd><dt>Tasa anual</dt><dd>{{form.tasaInteres}} %</dd><dt>Plazo</dt><dd>{{form.plazoMeses}} meses</dd><dt>Cuota mensual estimada</dt><dd>{{form.moneda}} {{calcularCuota() | number:'1.2-2'}}</dd><dt>Intereses estimados</dt><dd>{{form.moneda}} {{interesesEstimados | number:'1.2-2'}}</dd><dt>Total estimado a pagar</dt><dd>{{form.moneda}} {{totalEstimado | number:'1.2-2'}}</dd></dl>
+          <p class="form-note">La solicitud queda pendiente de evaluación. Los importes definitivos se muestran al registrarla.</p>
+          <p class="form-feedback" *ngIf="resultadoSolicitudIncierto" role="status">Conservamos esta solicitud y su clave. Retómala para confirmar su resultado.</p>
+        </div>
+        <p class="form-feedback" role="alert" *ngIf="!revisandoSolicitud && totalExcedeMaximo">El total supera el máximo permitido. Reduce el importe o el plazo.</p>
+        <mat-card class="preview-card" *ngIf="!revisandoSolicitud && importesValidos && !totalExcedeMaximo">
           <div>
             <span class="preview-label">Cuota mensual estimada</span>
             <strong>{{ form.moneda }} {{ calcularCuota() | number:'1.2-2' }}</strong>
           </div>
-          <span class="preview-note">Estimación referencial antes de enviar la solicitud.</span>
+          <span class="preview-note">Intereses estimados: {{form.moneda}} {{interesesEstimados | number:'1.2-2'}}<br>Total estimado: {{form.moneda}} {{totalEstimado | number:'1.2-2'}}</span>
         </mat-card>
         </form>
       </mat-dialog-content>
 
       <mat-dialog-actions align="end" class="dialog-actions">
-        <button mat-button (click)="cerrarModal()">Cancelar</button>
-        <button mat-raised-button color="primary" (click)="guardar()" [disabled]="guardando || prestamoForm.invalid">
-          {{ guardando ? (isAdmin ? 'Verificando...' : 'Enviando...') : (modoEdicion ? 'Actualizar' : (isAdmin ? 'Registrar' : 'Solicitar')) }}
+        <button mat-button [disabled]="guardando" (click)="resultadoSolicitudIncierto || !revisandoSolicitud ? cerrarModal() : volverSolicitud()">{{resultadoSolicitudIncierto ? 'Continuar después' : revisandoSolicitud ? 'Volver' : 'Cancelar'}}</button>
+        <button mat-raised-button color="primary" (click)="revisandoSolicitud ? guardar() : revisarSolicitud()" [disabled]="guardando || (!revisandoSolicitud && (prestamoForm.invalid || !solicitudValida || cargandoCuentas))">
+          {{ guardando ? 'Confirmando…' : resultadoSolicitudIncierto ? 'Consultar resultado' : revisandoSolicitud ? 'Confirmar solicitud' : 'Revisar solicitud' }}
         </button>
+      </mat-dialog-actions>
+    </ng-template>
+
+    <ng-template #paymentDialog>
+      <h2 mat-dialog-title>Pagar cuota</h2>
+      <mat-dialog-content class="dialog-content">
+        <p class="form-note">El pago no puede superar el saldo de tu cuenta ni la deuda pendiente.</p>
+        <p>Saldo pendiente: <strong>{{ pagoPrestamo?.moneda }} {{ pagoPrestamo?.saldoPendiente | number:'1.2-2' }}</strong></p>
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta para debitar</mat-label>
+          <mat-select [(ngModel)]="pagoCuentaId" name="pagoCuentaId" required>
+            <mat-option *ngFor="let c of cuentasParaPago" [value]="c.id">
+              {{ c.numeroCuenta }} · {{ c.moneda }} {{ c.saldo | number:'1.2-2' }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Monto del pago</mat-label>
+          <input matInput type="number" [(ngModel)]="pagoMonto" name="pagoMonto" min="0.01" step="0.01" required>
+        </mat-form-field>
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button mat-button (click)="cerrarModal()">Cancelar</button>
+        <button mat-raised-button color="primary" (click)="confirmarPago()" [disabled]="pagoEnCurso || !pagoValido">Pagar</button>
       </mat-dialog-actions>
     </ng-template>
   `,
   styles: [`
-    :host { display: block; }
-
     .prestamos-page { display: grid; gap: 18px; }
 
     .hero-card,
@@ -363,10 +375,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .hero-copy p,
     .table-header p,
     .notice-card p,
-    .dialog-hint,
-    .empty-state p,
-    .kpi-hint,
-    .preview-note {
+    .kpi-hint {
       color: #64748b;
       margin: 0;
       line-height: 1.5;
@@ -480,7 +489,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
     .mono-pill { background: #eff6ff; color: #1d4ed8; }
     .type-chip { background: #f1f5f9; color: #334155; }
-    .status-chip.status-pendiente { background: #fef3c7; color: #92400e; }
+    .status-chip.status-pendiente { background: #dbeafe; color: #1d4ed8; }
+    .status-chip.status-revision { background: #fef3c7; color: #92400e; }
     .status-chip.status-aprobado,
     .status-chip.status-desembolsado { background: #dcfce7; color: #166534; }
     .status-chip.status-pagado { background: #dbeafe; color: #1d4ed8; }
@@ -534,7 +544,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .dialog-content {
       display: grid;
       gap: 18px;
-      min-width: min(760px, 92vw);
+      min-width: 0;
     }
 
     .dialog-grid {
@@ -585,20 +595,44 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     }
   `]
 })
-export class PrestamosComponent implements OnInit {
+export class PrestamosComponent implements OnInit, OnDestroy {
+  errorLista=''; private consultaLista?:Subscription;
+  readonly patronDecimal = /^\d+(\.\d{1,2})?$/;
+  revisandoSolicitud = false;
+  resultadoSolicitudIncierto = false;
+  tieneSolicitudPendiente = false;
+  solicitudId: string = crypto.randomUUID();
+  private cargaSolicitud?: Subscription;
+  get importesValidos(): boolean {
+    return importeValido(this.form.montoSolicitado, 500) && this.patronDecimal.test(String(this.form.montoSolicitado))
+      && importeValido(this.form.tasaInteres, 1) && this.form.tasaInteres <= 100 && this.patronDecimal.test(String(this.form.tasaInteres))
+      && Number.isInteger(this.form.plazoMeses) && this.form.plazoMeses >= 3 && this.form.plazoMeses <= 360;
+  }
+  get solicitudValida(): boolean {
+    return this.importesValidos && !this.totalExcedeMaximo && this.misCuentas.some(c => c.id === this.form.cuentaDesembolsoId && c.usuarioId === this.form.usuarioId && c.estado === 'ACTIVA');
+  }
+  get totalExcedeMaximo(): boolean { return this.importesValidos && this.totalEstimado > 9999999999999.99; }
+  get totalEstimado(): number { return Math.round(this.calcularCuota() * this.form.plazoMeses * 100) / 100; }
+  get interesesEstimados(): number { return Math.round((this.totalEstimado - this.form.montoSolicitado) * 100) / 100; }
   prestamos: Prestamo[] = [];
   misCuentas: Cuenta[] = [];
   loading = true;
-  showModal = false;
-  modoEdicion = false;
+  pagina = 0;
+  totalPaginas = 0;
   guardando = false;
   mensaje = '';
   esError = false;
-  editandoId: number | null = null;
+  pagoOperacionId = crypto.randomUUID();
+  pagoEnCurso = false;
+  pagoMonto = 0;
+  pagoCuentaId = 0;
+  pagoPrestamo: Prestamo | null = null;
   dialogRef: MatDialogRef<unknown> | null = null;
 
   @ViewChild('loanDialog') loanDialogTpl!: TemplateRef<unknown>;
+  @ViewChild('paymentDialog') paymentDialogTpl!: TemplateRef<unknown>;
 
+  clientes: Usuario[]=[]; formError=''; cargandoCuentas=false;
   form: Prestamo = this.formVacio();
 
   get isAdmin(): boolean { return this.auth.getSession()?.rol === 'ADMIN'; }
@@ -609,19 +643,24 @@ export class PrestamosComponent implements OnInit {
       : ['numeroPrestamo', 'cuenta', 'tipo', 'monto', 'tasa', 'plazo', 'cuota', 'estado', 'acciones'];
   }
   get totalPrestamos(): number { return this.prestamos.length; }
-  get totalPendientes(): number { return this.prestamos.filter(p => p.estado === 'PENDIENTE').length; }
+  get totalPendientes(): number { return this.prestamos.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_REVISION').length; }
+  get montoPen(): number {return this.prestamos.filter(p=>p.moneda==='PEN').reduce((s,p)=>s+p.montoSolicitado,0);}
+  get montoUsd(): number {return this.prestamos.filter(p=>p.moneda==='USD').reduce((s,p)=>s+p.montoSolicitado,0);}
   get montoSolicitadoTotal(): number { return this.prestamos.reduce((s, p) => s + (p.montoSolicitado || 0), 0); }
   get monedaPrincipal(): string { return this.prestamos.find(p => p.moneda)?.moneda || 'PEN'; }
 
   constructor(
+    private usuarioSvc: UsuarioService,
     private prestamoSvc: PrestamoService,
     private cuentaSvc: CuentaService,
     private auth: AuthService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private solicitudes: SolicitudPendienteService
   ) {}
 
   ngOnInit(): void {
+    this.tieneSolicitudPendiente = !!this.solicitudes.leer();
     this.cargarPrestamos();
     if (!this.isAdmin) this.cargarMisCuentas();
   }
@@ -633,93 +672,159 @@ export class PrestamosComponent implements OnInit {
     });
   }
 
-  cargarPrestamos(): void {
-    this.loading = true;
-    const obs = this.isAdmin
-      ? this.prestamoSvc.getAll()
-      : this.prestamoSvc.getByUsuario(this.usuarioId);
+  cambiarPagina(delta: number): void { this.pagina += delta; this.cargarPrestamos(); }
 
-    obs.subscribe({
-      next: (data) => { this.prestamos = data; this.loading = false; },
-      error: () => {
-        this.mostrarMensaje('Error al cargar préstamos. Verifique que ms-prestamos esté activo en :8084.', true);
-        this.loading = false;
-      }
-    });
+  cargarPrestamos(): void {
+    this.consultaLista?.unsubscribe(); this.loading = true; this.errorLista=''; this.prestamos=[];
+    if (this.isAdmin) {
+      this.consultaLista=this.prestamoSvc.getPage(this.pagina, 20).pipe(timeout(15000)).subscribe({
+        next: page => {
+          if(this.pagina>0 && this.pagina>=page.totalPages){this.pagina=Math.max(0,page.totalPages-1);this.cargarPrestamos();return;}
+          this.prestamos = page.content; this.totalPaginas = page.totalPages; this.loading = false;
+        },
+        error: () => this.errorCargaPrestamos()
+      });
+    } else {
+      this.consultaLista=this.prestamoSvc.getByUsuario(this.usuarioId).pipe(timeout(15000)).subscribe({
+        next: data => { this.prestamos = data; this.loading = false; },
+        error: () => this.errorCargaPrestamos()
+      });
+    }
+  }
+
+  private errorCargaPrestamos(): void {
+    this.errorLista='No pudimos cargar los préstamos. Intenta nuevamente.';this.totalPaginas=0;
+    this.loading = false;
   }
 
   abrirModal(): void {
-    this.form = this.formVacio();
-    this.modoEdicion = false;
-    this.editandoId = null;
+    if (this.dialogRef) return;
+    const pendiente = this.solicitudes.leer();
+    this.tieneSolicitudPendiente = !!pendiente;
+    this.resultadoSolicitudIncierto = !!pendiente;
+    this.revisandoSolicitud = !!pendiente;
+    this.solicitudId = pendiente?.clave || crypto.randomUUID();
+    if (pendiente) {
+      this.form = pendiente.prestamo;
+      this.formError = '';
+      this.abrirDialogo();
+      return;
+    }
+    this.form = this.formVacio(); this.formError='';
+    if(this.isAdmin) {
+      this.misCuentas=[];
+      this.usuarioSvc.getPage(0,200,'CLIENTE',true).subscribe({next:p=>this.clientes=p.content,error:()=>this.formError='No pudimos cargar los clientes.'});
+    } else { this.form.usuarioId=this.usuarioId; this.actualizarCuentasSolicitud(); }
     this.abrirDialogo();
   }
 
-  editarPrestamo(p: Prestamo): void {
-    this.form = { ...p };
-    this.modoEdicion = true;
-    this.editandoId = p.id!;
-    this.abrirDialogo();
-  }
+  cerrarModal(): void { if (this.guardando || this.pagoEnCurso) return; this.cargaSolicitud?.unsubscribe(); this.cargandoCuentas=false; this.dialogRef?.close(); }
 
-  cerrarModal(): void { this.dialogRef?.close(); }
+  cambiarCliente(): void {
+    this.form.cuentaDesembolsoId=0; this.form.moneda=undefined;
+    this.actualizarCuentasSolicitud();
+  }
+  actualizarCuentasSolicitud(): void {
+    if (this.guardando || this.resultadoSolicitudIncierto) return;
+    this.cargaSolicitud?.unsubscribe();
+    this.revisandoSolicitud=false; this.misCuentas=[]; this.formError=''; this.cargandoCuentas=true;
+    const id=this.form.usuarioId;
+    this.cargaSolicitud=this.cuentaSvc.getByUsuario(id).pipe(timeout(10000)).subscribe({
+      next: cuentas => {
+        this.cargandoCuentas=false;
+        this.misCuentas=cuentas.filter(c=>c.estado==='ACTIVA' && c.usuarioId===id);
+        if (!this.misCuentas.some(c=>c.id===this.form.cuentaDesembolsoId)) this.form.cuentaDesembolsoId=0;
+        this.cambiarCuenta();
+      },
+      error: () => {this.cargandoCuentas=false;this.formError='No pudimos cargar las cuentas. Usa Actualizar cuentas para reintentar.';}
+    });
+  }
+  cambiarCuenta(): void { this.form.moneda=this.misCuentas.find(c=>c.id===this.form.cuentaDesembolsoId)?.moneda;this.formError=''; }
+
+  revisarSolicitud(): void {
+    if (this.guardando || this.cargandoCuentas || this.resultadoSolicitudIncierto) return;
+    if (!this.solicitudValida) {this.formError='Revisa la cuenta activa, el importe, la tasa y el plazo.';return;}
+    const cuenta=this.misCuentas.find(c=>c.id===this.form.cuentaDesembolsoId)!;
+    this.form.moneda=cuenta.moneda;this.form.numeroCuenta=cuenta.numeroCuenta;
+    this.formError='';this.revisandoSolicitud=true;
+  }
+  volverSolicitud(): void {
+    if (this.guardando || this.resultadoSolicitudIncierto) return;
+    this.revisandoSolicitud=false;this.formError='';
+  }
 
   guardar(): void {
-    if (!this.modoEdicion) {
-      if (!this.form.montoSolicitado || !this.form.tasaInteres || !this.form.plazoMeses ||
-          !this.form.cuentaDesembolsoId || this.form.cuentaDesembolsoId <= 0) {
-        this.mostrarMensaje('Complete todos los campos obligatorios.', true); return;
-      }
-      // Cliente usa su propio ID
-      if (!this.isAdmin) this.form.usuarioId = this.usuarioId;
-    }
-
+    if (this.guardando || !this.revisandoSolicitud) return;
+    this.formError='';
+    if (!this.resultadoSolicitudIncierto && !this.solicitudValida) return;
+    if (!this.isAdmin) this.form.usuarioId = this.usuarioId;
+    const reintentando=this.resultadoSolicitudIncierto;
+    try {this.solicitudes.guardar(this.solicitudId,this.form);}
+    catch {this.formError='No pudimos conservar la solicitud en este navegador. Intenta nuevamente.';return;}
+    this.tieneSolicitudPendiente=true;this.resultadoSolicitudIncierto=true;
     this.guardando = true;
-    const obs = this.modoEdicion
-      ? this.prestamoSvc.update(this.editandoId!, this.form)
-      : this.prestamoSvc.create(this.form);
+    const obs = this.prestamoSvc.create({...this.form},this.solicitudId);
 
     obs.subscribe({
-      next: () => {
-        this.mostrarMensaje(this.modoEdicion
-          ? 'Préstamo actualizado correctamente.'
-          : (this.isAdmin ? '✅ Préstamo creado. FeignClient verificó usuario y cuenta.' : '✅ Solicitud enviada. Un administrador la revisará pronto.'));
+      next: (prestamo) => {
+        this.guardando=false;
+        this.solicitudes.limpiar();this.tieneSolicitudPendiente=false;this.resultadoSolicitudIncierto=false;
+        this.mostrarMensaje(reintentando ? `Resultado confirmado. Estado: ${prestamo.estado}.` : this.isAdmin ? 'Préstamo creado correctamente.' : 'Solicitud enviada. Un administrador la revisará pronto.');
         this.cerrarModal();
         this.cargarPrestamos();
         this.guardando = false;
       },
       error: (err) => {
-        this.mostrarMensaje(err.error?.message || 'Error al procesar préstamo.', true);
+        if (!reintentando && [400,403,404,422].includes(err.status)) {
+          this.solicitudes.limpiar();this.tieneSolicitudPendiente=false;this.resultadoSolicitudIncierto=false;
+          this.revisandoSolicitud=false;this.solicitudId=crypto.randomUUID();
+        }
+        this.formError=err.error?.message || 'No pudimos confirmar el resultado. Retoma esta misma solicitud para comprobarlo.';
         this.guardando = false;
       }
     });
   }
 
-  aprobarPrestamo(id: number): void {
-    if (!confirm('¿Confirma aprobar este préstamo?')) return;
-    this.prestamoSvc.aprobar(id).subscribe({
-      next: () => { this.mostrarMensaje('Préstamo aprobado.'); this.cargarPrestamos(); },
-      error: (err) => this.mostrarMensaje(err.error?.message || 'Error al aprobar.', true)
+  async desembolsarPrestamo(id: number): Promise<void> {
+    if (!await solicitarConfirmacion(this.dialog,'Desembolsar pr?stamo','Revisa la solicitud antes de confirmar esta decisi?n.')) return;
+    this.prestamoSvc.desembolsar(id).subscribe({
+      next: () => { this.mostrarMensaje('Préstamo desembolsado correctamente.'); this.cargarPrestamos(); },
+      error: (err) => this.mostrarMensaje(err.error?.message || 'Error al desembolsar.', true)
     });
   }
 
-  eliminarPrestamo(id: number): void {
-    const msg = this.isAdmin ? '¿Confirma eliminar este préstamo?' : '¿Confirma cancelar esta solicitud de préstamo?';
-    if (!confirm(msg)) return;
-    this.prestamoSvc.delete(id).subscribe({
-      next: () => { this.mostrarMensaje(this.isAdmin ? 'Préstamo eliminado.' : 'Solicitud cancelada.'); this.cargarPrestamos(); },
-      error: () => this.mostrarMensaje('Error al procesar la operación.', true)
+  abrirPago(prestamo: Prestamo): void {
+    this.pagoOperacionId = crypto.randomUUID();
+    this.pagoPrestamo = prestamo;
+    this.pagoMonto = Math.min(prestamo.cuotaMensual || 0, prestamo.saldoPendiente || prestamo.montoSolicitado);
+    this.pagoCuentaId = this.cuentasParaPago[0]?.id || 0;
+    this.abrirDialogoTemplate(this.paymentDialogTpl);
+  }
+
+  get cuentasParaPago(): Cuenta[] {return this.misCuentas.filter(c=>c.moneda===this.pagoPrestamo?.moneda);}
+  get pagoValido(): boolean {
+    const cuenta=this.misCuentas.find(c=>c.id===this.pagoCuentaId);
+    return importeValido(this.pagoMonto) && !!cuenta && cuenta.moneda===this.pagoPrestamo?.moneda
+      && this.pagoMonto<=Number(cuenta.saldo || 0) && this.pagoMonto<=Number(this.pagoPrestamo?.saldoPendiente || 0);
+  }
+  confirmarPago(): void {
+    if (this.pagoEnCurso || !this.pagoValido || !this.pagoPrestamo?.id || !this.pagoCuentaId || this.pagoMonto <= 0) return;
+    this.pagoEnCurso = true;
+    this.prestamoSvc.pagar(this.pagoPrestamo.id, this.pagoMonto, this.pagoCuentaId, this.pagoOperacionId).subscribe({
+      next: () => { this.pagoEnCurso=false; this.cerrarModal(); this.mostrarMensaje('Pago registrado correctamente.'); this.cargarPrestamos(); this.cargarMisCuentas(); },
+      error: (err) => { this.pagoEnCurso=false; this.mostrarMensaje(err.error?.message || 'Error al registrar el pago. Reintente sin cerrar el formulario.', true); }
     });
   }
 
   calcularCuota(): number {
-    if (!this.form.montoSolicitado || !this.form.tasaInteres || !this.form.plazoMeses) return 0;
+    if (!this.importesValidos) return 0;
     const P = +this.form.montoSolicitado;
     const i = +this.form.tasaInteres / 12 / 100;
     const n = +this.form.plazoMeses;
     if (i === 0) return P / n;
-    return P * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    return Math.round(P * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) * 100) / 100;
   }
+  ngOnDestroy(): void {this.consultaLista?.unsubscribe();this.cargaSolicitud?.unsubscribe();this.dialogRef?.close();}
 
   private mostrarMensaje(msg: string, error = false): void {
     this.mensaje = msg;
@@ -736,6 +841,7 @@ export class PrestamosComponent implements OnInit {
   estadoClase(estado?: string): string {
     switch (estado) {
       case 'PENDIENTE': return 'status-pendiente';
+      case 'EN_REVISION': return 'status-revision';
       case 'APROBADO':
       case 'DESEMBOLSADO': return 'status-aprobado';
       case 'PAGADO': return 'status-pagado';
@@ -746,8 +852,12 @@ export class PrestamosComponent implements OnInit {
   }
 
   private abrirDialogo(): void {
+    this.abrirDialogoTemplate(this.loanDialogTpl);
+  }
+
+  private abrirDialogoTemplate(template: TemplateRef<unknown>): void {
     this.dialogRef?.close();
-    this.dialogRef = this.dialog.open(this.loanDialogTpl, {
+    this.dialogRef = this.dialog.open(template, {
       width: 'min(92vw, 840px)',
       maxWidth: '840px',
       autoFocus: false,

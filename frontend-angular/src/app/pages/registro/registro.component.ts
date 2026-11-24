@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, timeout } from 'rxjs';
+import { emailValido } from '../../models/form-rules';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -39,13 +41,13 @@ import { MatInputModule } from '@angular/material/input';
             <mat-form-field appearance="outline">
               <mat-label>Nombre</mat-label>
               <input matInput [(ngModel)]="form.nombre" name="nombre" placeholder="Juan"
-                     required minlength="2" #nombreM="ngModel" />
+                     required minlength="2" maxlength="100" autocomplete="given-name" #nombreM="ngModel" />
               <mat-error *ngIf="nombreM.invalid && (nombreM.dirty || nombreM.touched)">Mínimo 2 caracteres.</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Apellido</mat-label>
               <input matInput [(ngModel)]="form.apellido" name="apellido" placeholder="Pérez"
-                     required minlength="2" #apellidoM="ngModel" />
+                     required minlength="2" maxlength="100" autocomplete="family-name" #apellidoM="ngModel" />
               <mat-error *ngIf="apellidoM.invalid && (apellidoM.dirty || apellidoM.touched)">Mínimo 2 caracteres.</mat-error>
             </mat-form-field>
           </div>
@@ -53,19 +55,19 @@ import { MatInputModule } from '@angular/material/input';
           <mat-form-field appearance="outline">
             <mat-label>Correo electrónico</mat-label>
             <input matInput type="email" [(ngModel)]="form.email" name="email"
-                   placeholder="juan@correo.com" required email #emailM="ngModel" />
+                   placeholder="juan@correo.com" required email maxlength="100" autocomplete="email" #emailM="ngModel" />
             <mat-error *ngIf="emailM.invalid && (emailM.dirty || emailM.touched)">Ingrese un correo válido.</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Teléfono (opcional)</mat-label>
-            <input matInput [(ngModel)]="form.telefono" name="telefono" placeholder="999 999 999" />
+            <input matInput [(ngModel)]="form.telefono" name="telefono" placeholder="999 999 999" maxlength="20" autocomplete="tel" />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Contraseña</mat-label>
             <input matInput type="password" [(ngModel)]="form.password" name="password"
-                   placeholder="••••••••" required minlength="6" #passM="ngModel" />
+                   placeholder="••••••••" required minlength="6" maxlength="72" autocomplete="new-password" #passM="ngModel" />
             <mat-error *ngIf="passM.errors?.['required'] && (passM.dirty || passM.touched)">La contraseña es obligatoria.</mat-error>
             <mat-error *ngIf="passM.errors?.['minlength'] && (passM.dirty || passM.touched)">Mínimo 6 caracteres.</mat-error>
           </mat-form-field>
@@ -153,7 +155,9 @@ import { MatInputModule } from '@angular/material/input';
     }
   `]
 })
-export class RegistroComponent {
+export class RegistroComponent implements OnDestroy {
+  private solicitud?:Subscription;
+  private redireccion?:ReturnType<typeof setTimeout>;
   form = { nombre: '', apellido: '', email: '', password: '', telefono: '' };
   error = '';
   exito = '';
@@ -164,21 +168,26 @@ export class RegistroComponent {
   }
 
   onRegistro(): void {
+    if(this.loading)return;
+    const payload={...this.form,nombre:this.form.nombre.trim(),apellido:this.form.apellido.trim(),email:this.form.email.trim().toLowerCase(),telefono:this.form.telefono.trim()};
+    if(!emailValido(payload.email)||payload.email.length>100||payload.nombre.length<2||payload.nombre.length>100||payload.apellido.length<2||payload.apellido.length>100||payload.telefono.length>20||payload.password.length<6||payload.password.length>72){this.error='Revisa los datos: nombre y apellido de 2 a 100 caracteres, correo válido y contraseña de 6 a 72 caracteres.';return;}
     this.error = '';
     this.exito = '';
     this.loading = true;
 
-    this.auth.register(this.form).subscribe({
-      next: () => {
+    this.solicitud=this.auth.register(payload).pipe(timeout(30000)).subscribe({
+      next: response => {
+        if(!response.autenticado){this.loading=false;this.error='No pudimos confirmar el inicio de sesión. Intenta ingresar con tu correo.';return;}
         this.exito = '¡Cuenta creada! Redirigiendo...';
-        setTimeout(() => this.router.navigate(['/dashboard']), 1200);
+        this.redireccion=setTimeout(() => this.router.navigate(['/dashboard']), 1200);
       },
       error: (err) => {
         this.error = err.status === 409
-          ? 'Ya existe una cuenta con ese correo.'
-          : 'Error al crear la cuenta. Verifique que el servidor esté activo.';
+          ? 'Ya existe un usuario con ese correo. Inicia sesión o recupera tu contraseña.'
+          : 'No pudimos confirmar el registro. Conservamos tus datos; puedes reintentar o intentar iniciar sesión.';
         this.loading = false;
       }
     });
   }
+  ngOnDestroy():void {this.solicitud?.unsubscribe();clearTimeout(this.redireccion);}
 }

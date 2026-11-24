@@ -42,6 +42,15 @@ public class Prestamo {
     @Column(name = "cuota_mensual", precision = 15, scale = 2)
     private BigDecimal cuotaMensual;
 
+    @Column(name = "saldo_pendiente", nullable = false, precision = 15, scale = 2)
+    private BigDecimal saldoPendiente;
+
+    @Column(length = 500)
+    private String observacion;
+
+    @Column(name = "motivo_rechazo", length = 500)
+    private String motivoRechazo;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoPrestamo estado;
@@ -61,6 +70,9 @@ public class Prestamo {
 
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
+    @Column(name="fecha_desembolso") private LocalDate fechaDesembolso;
+    @Column(name="fecha_cancelacion") private LocalDateTime fechaCancelacion;
+    @Column(name="motivo_cancelacion",length=500) private String motivoCancelacion;
 
     @Column(name = "nombre_usuario", length = 200)
     private String nombreUsuario;
@@ -73,11 +85,13 @@ public class Prestamo {
         this.fechaSolicitud = LocalDateTime.now();
         if (this.estado == null) this.estado = EstadoPrestamo.PENDIENTE;
         if (this.moneda == null) this.moneda = "PEN";
-        this.numeroPrestamo = "PRE" + System.currentTimeMillis();
+        if (this.saldoPendiente == null) this.saldoPendiente =
+                this.montoAprobado != null ? this.montoAprobado : this.montoSolicitado;
+        this.numeroPrestamo = "PRE" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0,16);
     }
 
     public enum EstadoPrestamo {
-        PENDIENTE, APROBADO, DESEMBOLSADO, RECHAZADO, PAGADO, VENCIDO
+        PENDIENTE, EN_REVISION, APROBADO, RECHAZADO, DESEMBOLSADO, PAGADO, VENCIDO, CANCELADO
     }
 
     public enum TipoPrestamo {

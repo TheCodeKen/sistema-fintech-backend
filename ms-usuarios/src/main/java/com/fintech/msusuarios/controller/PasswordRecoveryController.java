@@ -23,15 +23,9 @@ public class PasswordRecoveryController {
     public ResponseEntity<Map<String, String>> solicitarRecuperacion(
             @Valid @RequestBody ForgotPasswordRequest request) {
 
-        String enlace = passwordRecoveryService
-                .solicitarRecuperacion(request.getEmail());
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "message", "Enlace generado correctamente",
-                        "link", enlace != null ? enlace : ""
-                )
-        );
+        passwordRecoveryService.solicitarRecuperacion(request.getEmail());
+        return ResponseEntity.ok(Map.of("message",
+                "Si el correo existe, recibirá instrucciones de recuperación"));
     }
 
     @PostMapping("/reset")

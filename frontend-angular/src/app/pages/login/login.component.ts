@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, timeout } from 'rxjs';
+import { emailValido } from '../../models/form-rules';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -17,9 +19,10 @@ import { MatInputModule } from '@angular/material/input';
     <div class="auth-shell">
       <div class="auth-visual">
         <div class="auth-visual-badge">FinTechPro</div>
-        <h1>Acceso bancario moderno</h1>
+        <h1>Tu dinero,
+a tu manera.</h1>
         <p>
-          Inicia sesión en una experiencia limpia, profesional y consistente con la identidad visual de la plataforma.
+          Tus cuentas, movimientos y proyectos. Todo en un mismo lugar.
         </p>
       </div>
 
@@ -204,7 +207,8 @@ import { MatInputModule } from '@angular/material/input';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
+  private solicitud?:Subscription;
   email = '';
   password = '';
   error = '';
@@ -215,16 +219,20 @@ export class LoginComponent {
   }
 
   onLogin(): void {
+    if(this.loading)return;
+    this.email=this.email.trim().toLowerCase();
+    if(!emailValido(this.email)||!this.password){this.error='Ingresa un correo válido y tu contraseña.';return;}
     this.error = '';
     this.loading = true;
-    this.auth.login({ email: this.email, password: this.password }).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+    this.solicitud=this.auth.login({ email: this.email, password: this.password }).pipe(timeout(15000)).subscribe({
+      next: response => {if(response.autenticado)this.router.navigate(['/dashboard']);else{this.loading=false;this.error='No se pudo iniciar la sesión. Revisa tus credenciales.';}},
       error: (err) => {
         this.error = err.status === 401
           ? 'Credenciales incorrectas. Verifique su email y contraseña.'
-          : 'Error al conectar con el servidor. Verifique que los microservicios estén activos.';
+          : 'No pudimos conectar. Intenta de nuevo en unos momentos.';
         this.loading = false;
       }
     });
   }
+  ngOnDestroy():void {this.solicitud?.unsubscribe();}
 }

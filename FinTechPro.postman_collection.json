@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "FinTechPro — contratos actuales",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Entorno de demostración. Cambiar las variables de IDs y conservar operacion_id para un reintento. Generar otra clave para una operación nueva."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4200"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "usuario_id",
+      "value": "2"
+    },
+    {
+      "key": "cuenta_id",
+      "value": "1"
+    },
+    {
+      "key": "cuenta_origen",
+      "value": ""
+    },
+    {
+      "key": "cuenta_destino",
+      "value": ""
+    },
+    {
+      "key": "transaccion_id",
+      "value": "1"
+    },
+    {
+      "key": "prestamo_id",
+      "value": "1"
+    },
+    {
+      "key": "alerta_id",
+      "value": "1"
+    },
+    {
+      "key": "operacion_id",
+      "value": "postman-operacion-0001"
+    },
+    {
+      "key": "reset_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Login (guarda el Bearer)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/usuarios/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@fintech.pe\",\n  \"password\": \"admin123\"\n}"
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Login correcto\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"token\", pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios paginados",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/usuarios?page=0&size=10",
+        "header": []
+      }
+    },
+    {
+      "name": "Cuentas paginadas",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/cuentas?page=0&size=10",
+        "header": []
+      }
+    },
+    {
+      "name": "Crear cuenta pendiente",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/cuentas",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioId\": \"{{usuario_id}}\",\n  \"tipoCuenta\": \"AHORROS\",\n  \"moneda\": \"PEN\",\n  \"saldoInicial\": 0\n}"
+        }
+      }
+    },
+    {
+      "name": "Activar cuenta",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/api/cuentas/{{cuenta_id}}/activar",
+        "header": []
+      }
+    },
+    {
+      "name": "Mis cuentas",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/cuentas/usuario/{{usuario_id}}",
+        "header": []
+      }
+    },
+    {
+      "name": "Nueva operación (conservar operacion_id al reintentar)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/transacciones",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{operacion_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"numeroCuentaOrigen\": \"{{cuenta_origen}}\",\n  \"tipoTransaccion\": \"TRANSFERENCIA\",\n  \"numeroCuentaDestino\": \"{{cuenta_destino}}\",\n  \"monto\": 10,\n  \"descripcion\": \"Prueba Postman\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Transacciones paginadas",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/transacciones?page=0&size=10",
+        "header": []
+      }
+    },
+    {
+      "name": "Reversión administrativa",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/transacciones/{{transaccion_id}}/revertir",
+        "header": []
+      }
+    },
+    {
+      "name": "Solicitar préstamo",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/prestamos",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioId\": \"{{usuario_id}}\",\n  \"cuentaDesembolsoId\": \"{{cuenta_id}}\",\n  \"montoSolicitado\": 500,\n  \"tasaInteres\": 18,\n  \"plazoMeses\": 3,\n  \"tipoPrestamo\": \"PERSONAL\",\n  \"moneda\": \"PEN\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Revisar préstamo",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/api/prestamos/{{prestamo_id}}/revisar",
+        "header": []
+      }
+    },
+    {
+      "name": "Aprobar préstamo",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/api/prestamos/{{prestamo_id}}/aprobar",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"observacion\": \"Revisión aprobada\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Desembolsar préstamo",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/prestamos/{{prestamo_id}}/desembolsar",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Pagar préstamo (conservar operacion_id al reintentar)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/prestamos/{{prestamo_id}}/pagar",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cuentaId\": \"{{cuenta_id}}\",\n  \"monto\": 50,\n  \"operacionId\": \"{{operacion_id}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Auditoría",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/auditoria?page=0&size=20",
+        "header": []
+      }
+    },
+    {
+      "name": "Alertas",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/alertas?page=0&size=20",
+        "header": []
+      }
+    },
+    {
+      "name": "Resolver alerta",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/api/alertas/{{alerta_id}}/resolver",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"RESUELTA\",\n  \"observacion\": \"Revisada por administrador\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Recuperar contraseña",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/usuarios/password/forgot",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"cliente@fintech.pe\"\n}"
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "Restablecer contraseña",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/usuarios/password/reset",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"nuevaPassword\": \"Nueva123!\"\n}"
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    }
+  ]
+}

@@ -1,10 +1,14 @@
-import { Component } from '@angular/core';
+import { timer, switchMap, catchError, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { AlertaService } from '../../services/alerta.service';
+import { NotificacionService } from '../../services/notificacion.service';
 
 @Component({
   selector: 'app-navbar',
@@ -28,16 +32,21 @@ import { MatToolbarModule } from '@angular/material/toolbar';
         <!-- Solo ADMIN -->
         <ng-container *ngIf="isAdmin">
           <a mat-button routerLink="/usuarios" routerLinkActive="active">Usuarios</a>
+          <a mat-button routerLink="/auditoria" routerLinkActive="active">Auditoría</a>
+          <a mat-button routerLink="/alertas" routerLinkActive="active">Alertas <span *ngIf="alertasPendientes > 0" class="alert-count">{{ alertasPendientes }}</span></a>
         </ng-container>
 
         <a mat-button routerLink="/cuentas" routerLinkActive="active">Cuentas</a>
         <a mat-button routerLink="/transacciones" routerLinkActive="active">Transacciones</a>
         <a mat-button routerLink="/prestamos" routerLinkActive="active">
-          Préstamos <span *ngIf="isAdmin" class="feign-tag">FeignClient</span>
+          Préstamos
         </a>
       </div>
 
       <div class="navbar-user">
+        <a class="notification-bell" routerLink="/notificaciones" routerLinkActive="active" [attr.aria-label]="'Notificaciones: '+notificaciones.noLeidas()+' sin leer'" title="Notificaciones">
+          <mat-icon aria-hidden="true">notifications_none</mat-icon><span class="notification-label">Notificaciones</span><span class="notification-count" *ngIf="notificaciones.noLeidas()>0">{{notificaciones.noLeidas()>99 ? '99+' : notificaciones.noLeidas()}}</span>
+        </a>
         <div class="user-meta">
           <span class="user-name">{{ session?.nombre }} {{ session?.apellido }}</span>
           <span class="user-role">{{ session?.rol }}</span>
@@ -86,7 +95,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
     .logo-accent { color: #7c3aed; }
     .logo-copy small { color: #64748b; font-size: 11px; margin-top: 2px; }
 
-    .navbar-links { display: flex; gap: 4px; flex: 1; align-items: center; overflow: auto; }
+    .navbar-links { display: flex; gap: 4px; flex: 1; align-items: center; }
     .navbar-links a {
       padding: 8px 12px; border-radius: 999px;
       text-decoration: none; color: #64748b;
@@ -102,6 +111,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
       color: #fff; padding: 1px 5px; border-radius: 4px;
       letter-spacing: .3px;
     }
+    .alert-count { background:#dc2626; color:#fff; border-radius:999px; padding:2px 7px; font-size:10px; font-weight:800; }
 
     .navbar-user { display: flex; align-items: center; gap: 10px; margin-left: auto; }
     .user-meta { display: flex; flex-direction: column; line-height: 1.1; text-align: right; }
@@ -109,7 +119,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
     .user-role { font-size: 11px; color: #64748b; }
     .logout-btn { border-radius: 999px; }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1050px) {
       .navbar { flex-wrap: wrap; height: auto; padding: 12px 16px; }
       .navbar-links { order: 3; width: 100%; }
       .navbar-user { margin-left: 0; }
@@ -118,7 +128,13 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 })
 export class NavbarComponent {
   session = this.auth.getSession();
+  private destroyRef = inject(DestroyRef);
+  alertasPendientes = 0;
   get isAdmin(): boolean { return this.session?.rol === 'ADMIN'; }
-  constructor(private auth: AuthService, private router: Router) {}
-  logout(): void { this.auth.logout(); this.router.navigate(['/login']); }
+  constructor(private auth: AuthService, private router: Router, private alertaService: AlertaService,public notificaciones:NotificacionService) {
+    notificaciones.reiniciar();
+    timer(0,15000).pipe(switchMap(()=>notificaciones.actualizarContador().pipe(catchError(()=>of(notificaciones.noLeidas())))),takeUntilDestroyed(this.destroyRef)).subscribe();
+    if (this.isAdmin) timer(0, 15000).pipe(switchMap(() => this.alertaService.countPendientes().pipe(catchError(() => of(this.alertasPendientes)))), takeUntilDestroyed(this.destroyRef)).subscribe(count => this.alertasPendientes = count);
+  }
+  logout(): void { this.auth.logout();this.notificaciones.reiniciar(); this.router.navigate(['/login']); }
 }

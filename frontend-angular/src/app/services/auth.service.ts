@@ -41,11 +41,22 @@ export class AuthService {
 
   getSession(): LoginResponse | null {
     const data = sessionStorage.getItem(this.AUTH_KEY);
-    return data ? JSON.parse(data) : null;
+    if (!data || !this.tokenVigente()) { this.logout(); return null; }
+    try { return JSON.parse(data); } catch { this.logout(); return null; }
   }
 
   getToken(): string | null {
     return sessionStorage.getItem(this.TOKEN_KEY);
+  }
+
+  private tokenVigente(): boolean {
+    try {
+      const token = sessionStorage.getItem(this.TOKEN_KEY);
+      if (!token) return false;
+      const raw = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(raw));
+      return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+    } catch { return false; }
   }
 
   isLoggedIn(): boolean {

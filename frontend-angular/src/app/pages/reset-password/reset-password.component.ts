@@ -60,6 +60,7 @@ const passwordsMatchValidator: ValidatorFn = (control: AbstractControl): Validat
             <input matInput type="password" formControlName="password" placeholder="Nueva contraseña" />
             <mat-error *ngIf="password?.hasError('required')">La nueva contraseña es obligatoria.</mat-error>
             <mat-error *ngIf="password?.hasError('minlength')">Debe tener al menos 6 caracteres.</mat-error>
+            <mat-error *ngIf="password?.hasError('maxlength')">Debe tener como máximo 72 caracteres.</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -171,7 +172,7 @@ export class ResetPasswordComponent {
 
   form = this.fb.group({
     token: [this.route.snapshot.paramMap.get('token') || this.route.snapshot.queryParamMap.get('token') || '', Validators.required],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72)]],
     confirmPassword: ['', Validators.required]
   }, { validators: passwordsMatchValidator });
 
@@ -187,14 +188,14 @@ export class ResetPasswordComponent {
 
     const payload = {
       token: this.token?.value,
-      newPassword: this.password?.value,
+      nuevaPassword: this.password?.value,
       confirmPassword: this.confirmPassword?.value
     };
 
     this.loading = true;
     this.http.post(`${environment.msUsuariosUrl}/password/reset`, payload).subscribe({
       next: (resp: any) => {
-        this.snackBar.open(resp?.mensaje || 'La contraseña fue actualizada correctamente.', 'Cerrar', {
+        this.snackBar.open(resp?.message || 'La contraseña fue actualizada correctamente.', 'Cerrar', {
           duration: 4500,
           horizontalPosition: 'end',
           verticalPosition: 'top'

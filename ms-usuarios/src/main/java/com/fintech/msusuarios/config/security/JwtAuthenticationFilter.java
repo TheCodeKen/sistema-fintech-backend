@@ -1,0 +1,64 @@
+package com.fintech.msusuarios.config.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private final com.fintech.msusuarios.repository.UsuarioRepository usuarios;
+    public JwtAuthenticationFilter(com.fintech.msusuarios.repository.UsuarioRepository usuarios) { this.usuarios=usuarios; }
+    @Value("${app.jwt.secret}") private String secret;
+
+    @Value("${app.internal.service-key}") private String internalKey;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        request.setAttribute("servicioInterno", false);
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            try {
+                Claims claims = Jwts.parser().verifyWith(signingKey()).build()
+                        .parseSignedClaims(header.substring(7)).getPayload();
+                String role = claims.get("rol", String.class);
+                Long id=claims.get("userId",Long.class);
+                var usuario=usuarios.findById(id);
+                Integer version=claims.get("version",Integer.class);
+                if(usuario.isEmpty() || !Boolean.TRUE.equals(usuario.get().getActivo()) || version==null
+                        || version.intValue()!=(usuario.get().getTokenVersion()==null ? 0 : usuario.get().getTokenVersion())
+                        || !usuario.get().getRol().name().equals(role)) throw new IllegalArgumentException("Sesión revocada");
+                if (role != null) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(claims.getSubject(), null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                    authentication.setDetails(claims.get("userId", Long.class));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    request.setAttribute("servicioInterno", !internalKey.isBlank() && internalKey.equals(request.getHeader("X-Internal-Service")));
+                }
+            } catch (JwtException | IllegalArgumentException ignored) {
+                SecurityContextHolder.clearContext();
+            }
+        }
+        filterChain.doFilter(request, response);
+    }
+
+    private SecretKey signingKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+}

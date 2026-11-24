@@ -1,0 +1,8 @@
+{
+  "project": "fintech-verificacion",
+  "directory": "D:/CIBERTEC/2026-1/DAW 2/PROYECTO FINAL 2/Nueva carpeta/.verification/operations",
+  "maxQueueAgeSeconds": 60,
+  "retainLocal": 14,
+  "remote": null,
+  "smtp": null
+}

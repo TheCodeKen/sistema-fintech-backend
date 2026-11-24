@@ -8,6 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+@org.springframework.context.annotation.Profile("dev")
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -30,7 +31,7 @@ public class DataLoader implements CommandLineRunner {
                     .activo(true)
                     .build();
             usuarioRepository.save(admin);
-            log.info("✅ Usuario admin creado: admin@fintech.pe / admin123");
+            log.info("✅ Usuario admin creado: admin@fintech.pe");
         }
 
         // Crea un cliente de prueba si no existe
@@ -45,7 +46,7 @@ public class DataLoader implements CommandLineRunner {
                     .activo(true)
                     .build();
             usuarioRepository.save(cliente);
-            log.info("✅ Usuario cliente creado: cliente@fintech.pe / admin123");
+            log.info("✅ Usuario cliente creado: cliente@fintech.pe");
         }
     }
 }

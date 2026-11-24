@@ -37,23 +37,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // ★ Manejo específico de errores FeignClient ★
-    @ExceptionHandler(FeignException.class)
-    public ResponseEntity<Map<String, Object>> handleFeignException(FeignException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now().toString());
-        body.put("status", ex.status());
-        body.put("message", "Error en comunicación con microservicio externo: " + ex.getMessage());
-        body.put("tipo", "FeignClient Error");
-        return ResponseEntity.status(ex.status() > 0 ? ex.status() : 503).body(body);
-    }
 
+    @ExceptionHandler({java.time.format.DateTimeParseException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String,Object>> entrada(Exception ex) {
+        return ResponseEntity.badRequest().body(Map.of("status",400,"message","Entrada inválida; revise tipos, fechas y formato"));
+    }
+    @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,
+            org.springframework.dao.ConcurrencyFailureException.class})
+    public ResponseEntity<Map<String,Object>> conflicto(Exception ex) {
+        return ResponseEntity.status(409).body(Map.of("status",409,"message","Conflicto de datos; consulte el estado y reintente la misma operación"));
+    }
+    @ExceptionHandler(feign.FeignException.class)
+    public ResponseEntity<Map<String,Object>> remoto(feign.FeignException ex) {
+        int code=ex.status()>=400 && ex.status()<500 ? ex.status() : 503;
+        return ResponseEntity.status(code).body(Map.of("status",code,"message","No se pudo completar la operación con el servicio requerido"));
+    }
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now().toString());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("message", "Error interno del servidor: " + ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    public ResponseEntity<Map<String,Object>> inesperado(Exception ex) {
+        org.slf4j.LoggerFactory.getLogger(getClass()).error("Error no controlado",ex);
+        return ResponseEntity.status(500).body(Map.of("status",500,"message","Error interno del servidor"));
     }
 }

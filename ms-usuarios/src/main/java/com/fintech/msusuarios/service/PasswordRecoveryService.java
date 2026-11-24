@@ -63,19 +63,7 @@ public class PasswordRecoveryService {
         passwordResetTokenRepository.save(passwordResetToken);
 
         String enlace = construirEnlaceReseteo(token);
-        //mailService.enviarCorreoRecuperacion(usuario.getEmail(), usuario.getNombre(), enlace);
-
-        log.info("=================================================");
-        log.info("LINK DE RECUPERACION:");
-        log.info(enlace);
-        log.info("=================================================");
-
-        // Desactivado temporalmente para pruebas
-        // mailService.enviarCorreoRecuperacion(
-        //         usuario.getEmail(),
-        //         usuario.getNombre(),
-        //         enlace
-        // );
+        mailService.enviarCorreoRecuperacion(usuario.getEmail(), usuario.getNombre(), enlace);
 
         return enlace;
     }
@@ -93,6 +81,7 @@ public class PasswordRecoveryService {
 
         Usuario usuario = passwordResetToken.getUsuario();
         usuario.setPassword(passwordEncoder.encode(nuevaPassword));
+        usuario.setTokenVersion((usuario.getTokenVersion()==null ? 0 : usuario.getTokenVersion())+1);
         usuarioRepository.save(usuario);
 
         passwordResetToken.setUsado(true);

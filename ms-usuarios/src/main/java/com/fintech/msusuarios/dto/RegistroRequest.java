@@ -14,17 +14,21 @@ public class RegistroRequest {
 
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "Email inválido")
+    @Size(max=100)
     private String email;
 
     @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+    @Size(min = 6, max = 72, message = "La contraseña debe tener al menos 6 caracteres")
     private String password;
 
     @NotBlank(message = "El nombre es obligatorio")
+    @Size(max=100)
     private String nombre;
 
     @NotBlank(message = "El apellido es obligatorio")
+    @Size(max=100)
     private String apellido;
 
+    @Size(max=20)
     private String telefono;
 }

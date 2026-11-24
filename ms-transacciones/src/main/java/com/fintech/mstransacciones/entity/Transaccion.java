@@ -16,12 +16,21 @@ public class Transaccion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name="operacion_id", unique=true, length=120)
+    private String operacionId;
+    @Column(length=64)
+    private String huella;
 
     @Column(name = "cuenta_origen_id", nullable = false)
     private Long cuentaOrigenId;
 
     @Column(name = "cuenta_destino_id")
     private Long cuentaDestinoId;
+    @Column(name="usuario_origen_id") private Long usuarioOrigenId;
+    @Column(name="usuario_destino_id") private Long usuarioDestinoId;
+
+    @Column(name = "transaccion_padre_id")
+    private Long transaccionPadreId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_transaccion", nullable = false)
@@ -48,16 +57,16 @@ public class Transaccion {
     @PrePersist
     public void prePersist() {
         this.fechaTransaccion = LocalDateTime.now();
-        if (this.estado == null) this.estado = EstadoTransaccion.COMPLETADA;
+        if (this.estado == null) this.estado = EstadoTransaccion.PENDIENTE;
         if (this.moneda == null) this.moneda = "PEN";
-        this.numeroReferencia = "TXN" + System.currentTimeMillis();
+        this.numeroReferencia = "TXN" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0,24);
     }
 
     public enum TipoTransaccion {
-        DEPOSITO, RETIRO, TRANSFERENCIA, PAGO
+        DEPOSITO, RETIRO, TRANSFERENCIA, PAGO, DESEMBOLSO_PRESTAMO, PAGO_PRESTAMO, REVERSION
     }
 
     public enum EstadoTransaccion {
-        PENDIENTE, COMPLETADA, FALLIDA, CANCELADA
+        PENDIENTE, PROCESANDO, COMPLETADA, FALLIDA, CANCELADA, REVERTIDA
     }
 }

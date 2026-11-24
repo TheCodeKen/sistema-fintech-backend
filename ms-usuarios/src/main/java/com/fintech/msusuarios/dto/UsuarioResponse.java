@@ -17,6 +17,7 @@ public class UsuarioResponse {
     private String nombre;
     private String apellido;
     private String telefono;
+    private String dni;
     private String rol;
     private Boolean activo;
     private LocalDateTime fechaRegistro;
@@ -28,6 +29,7 @@ public class UsuarioResponse {
                 .nombre(u.getNombre())
                 .apellido(u.getApellido())
                 .telefono(u.getTelefono())
+                .dni(u.getDni())
                 .rol(u.getRol().name())
                 .activo(u.getActivo())
                 .fechaRegistro(u.getFechaRegistro())

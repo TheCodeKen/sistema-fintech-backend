@@ -163,7 +163,7 @@ export class ForgotPasswordComponent {
     this.loading = true;
     this.http.post(`${environment.msUsuariosUrl}/password/forgot`, this.form.value).subscribe({
       next: (resp: any) => {
-        this.snackBar.open(resp?.mensaje || 'Si el correo existe, recibirás las instrucciones de recuperación.', 'Cerrar', {
+        this.snackBar.open(resp?.message || 'Si el correo existe, recibirás las instrucciones de recuperación.', 'Cerrar', {
           duration: 4500,
           horizontalPosition: 'end',
           verticalPosition: 'top'

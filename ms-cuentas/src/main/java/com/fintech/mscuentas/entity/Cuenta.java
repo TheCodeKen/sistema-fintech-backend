@@ -42,7 +42,7 @@ public class Cuenta {
     @PrePersist
     public void prePersist() {
         this.fechaApertura = LocalDateTime.now();
-        if (this.estado == null) this.estado = EstadoCuenta.ACTIVA;
+        if (this.estado == null) this.estado = EstadoCuenta.PENDIENTE_VERIFICACION;
         if (this.moneda == null) this.moneda = "PEN";
         if (this.saldo == null) this.saldo = BigDecimal.ZERO;
     }
@@ -52,6 +52,11 @@ public class Cuenta {
     }
 
     public enum EstadoCuenta {
-        ACTIVA, INACTIVA, BLOQUEADA
+        PENDIENTE_VERIFICACION,
+        ACTIVA,
+        BLOQUEADA,
+        CONGELADA,
+        INACTIVA,
+        CERRADA
     }
 }

@@ -24,12 +24,44 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PrestamoServiceTest {
+    @org.junit.jupiter.api.BeforeEach
+    void autenticar() {
+        var auth=new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("admin",null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        auth.setDetails(1L);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+    @org.junit.jupiter.api.AfterEach
+    void limpiarSesion() { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+
 
     @Mock private PrestamoRepository prestamoRepository;
+    @Mock private com.fintech.msprestamos.service.CronogramaService cronograma;
+    @Mock private java.time.Clock reloj;
     @Mock private UsuarioFeignClient usuarioFeignClient;
     @Mock private CuentaFeignClient cuentaFeignClient;
+    @Mock private com.fintech.msprestamos.client.TransaccionFeignClient transaccionFeignClient;
+    @Mock private com.fintech.msprestamos.repository.PagoRepository pagoRepository;
+    @Mock private com.fintech.msprestamos.service.AuditoriaOutbox auditoriaOutbox;
+    @Mock private com.fintech.msprestamos.service.NotificacionOutbox notificaciones;
 
     @InjectMocks private PrestamoService prestamoService;
+
+    @Test
+    void pagoFallidoNoReduceDeuda() {
+        var p=Prestamo.builder().id(1L).usuarioId(1L).cuentaDesembolsoId(1L)
+            .estado(Prestamo.EstadoPrestamo.DESEMBOLSADO).saldoPendiente(new BigDecimal("100.00"))
+            .moneda("PEN").build();
+        when(prestamoRepository.bloquearPorId(1L)).thenReturn(java.util.Optional.of(p));
+        when(cuentaFeignClient.obtenerCuentaPorId(1L)).thenReturn(cuentaMock);
+        when(transaccionFeignClient.crear(any(),anyString())).thenReturn(new TransaccionResultado(1L,"FALLIDA"));
+        var pago=new PagoPrestamoDTO();pago.setCuentaId(1L);pago.setMonto(new BigDecimal("10.00"));
+        pago.setOperacionId("pago-prueba-0001");
+        assertThrows(ResponseStatusException.class,()->prestamoService.pagar(1L,pago));
+        assertEquals(new BigDecimal("100.00"),p.getSaldoPendiente());
+        verify(prestamoRepository,never()).save(any());
+        verify(pagoRepository,never()).save(any());
+    }
 
     private UsuarioClientDTO usuarioMock;
     private CuentaClientDTO cuentaMock;
@@ -49,6 +81,7 @@ class PrestamoServiceTest {
         cuentaMock.setNumeroCuenta("FT10000001");
         cuentaMock.setUsuarioId(1L);
         cuentaMock.setEstado("ACTIVA");
+        cuentaMock.setMoneda("PEN");
 
         request = new PrestamoRequest();
         request.setUsuarioId(1L);
@@ -90,6 +123,17 @@ class PrestamoServiceTest {
         // Verificar que los FeignClients fueron llamados
         verify(usuarioFeignClient, times(1)).obtenerUsuarioPorId(1L);
         verify(cuentaFeignClient, times(1)).obtenerCuentaPorId(1L);
+    }
+
+    @Test
+    void totalExcesivoSeRechazaAntesDeGuardar() {
+        when(usuarioFeignClient.obtenerUsuarioPorId(1L)).thenReturn(usuarioMock);
+        when(cuentaFeignClient.obtenerCuentaPorId(1L)).thenReturn(cuentaMock);
+        request.setMontoSolicitado(new BigDecimal("9999999999999.99"));
+        request.setPlazoMeses(360);
+        var error=assertThrows(ResponseStatusException.class,()->prestamoService.crear(request));
+        assertEquals(400,error.getStatusCode().value());
+        verify(prestamoRepository,never()).save(any());
     }
 
     @Test

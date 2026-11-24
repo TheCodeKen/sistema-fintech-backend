@@ -4,6 +4,7 @@ import com.fintech.msusuarios.dto.LoginRequest;
 import com.fintech.msusuarios.dto.LoginResponse;
 import com.fintech.msusuarios.entity.Usuario;
 import com.fintech.msusuarios.repository.UsuarioRepository;
+import com.fintech.msusuarios.security.JwtUtil;
 import com.fintech.msusuarios.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,16 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
+    @org.junit.jupiter.api.BeforeEach
+    void autenticar() {
+        var auth=new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("admin",null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        auth.setDetails(1L);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+    @org.junit.jupiter.api.AfterEach
+    void limpiarSesion() { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+
 
     @Mock
     private UsuarioRepository usuarioRepository;
@@ -28,8 +39,25 @@ class UsuarioServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @Mock
+    private com.fintech.msusuarios.service.AuditoriaService auditoriaService;
+
     @InjectMocks
     private UsuarioService usuarioService;
+
+    @Test
+    void ultimoAdministradorNoPuedeCambiarARolCliente() {
+        usuarioMock.setRol(Usuario.Rol.ADMIN);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioMock));
+        when(usuarioRepository.countByRolAndActivoTrue(Usuario.Rol.ADMIN)).thenReturn(1L);
+        var request=new com.fintech.msusuarios.dto.UsuarioRequest();
+        request.setRol(Usuario.Rol.CLIENTE);
+        assertThrows(ResponseStatusException.class,()->usuarioService.actualizar(1L,request));
+        verify(usuarioRepository,never()).save(any());
+    }
 
     private Usuario usuarioMock;
 
@@ -54,6 +82,7 @@ class UsuarioServiceTest {
 
         when(usuarioRepository.findByEmail("test@fintech.pe")).thenReturn(Optional.of(usuarioMock));
         when(passwordEncoder.matches("password123", "$2a$hash")).thenReturn(true);
+        when(jwtUtil.generateToken(1L, "test@fintech.pe", "CLIENTE", 0)).thenReturn("test-token");
 
         LoginResponse resp = usuarioService.login(req);
 

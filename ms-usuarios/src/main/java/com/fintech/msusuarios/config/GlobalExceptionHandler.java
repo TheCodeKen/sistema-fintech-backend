@@ -36,16 +36,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    @ExceptionHandler({java.time.format.DateTimeParseException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String,Object>> entrada(Exception ex) {
+        return ResponseEntity.badRequest().body(Map.of("status",400,"message","Entrada inválida; revise tipos, fechas y formato"));
+    }
+    @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,
+            org.springframework.dao.ConcurrencyFailureException.class})
+    public ResponseEntity<Map<String,Object>> conflicto(Exception ex) {
+        return ResponseEntity.status(409).body(Map.of("status",409,"message","Conflicto de datos; consulte el estado y reintente la misma operación"));
+    }
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-
-    ex.printStackTrace();
-
-    Map<String, Object> body = new HashMap<>();
-    body.put("timestamp", LocalDateTime.now().toString());
-    body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-    body.put("message", "Error interno del servidor");
-
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
-}
+    public ResponseEntity<Map<String,Object>> inesperado(Exception ex) {
+        org.slf4j.LoggerFactory.getLogger(getClass()).error("Error no controlado",ex);
+        return ResponseEntity.status(500).body(Map.of("status",500,"message","Error interno del servidor"));
+    }
 }

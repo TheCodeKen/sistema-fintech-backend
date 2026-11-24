@@ -35,10 +35,27 @@ export const routes: Routes = [
       import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
   {
+    path: 'notificaciones',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/notificaciones/notificaciones.component').then(m => m.NotificacionesComponent)
+  },
+  {
     path: 'usuarios',
     canActivate: [authGuard, adminGuard],
     loadComponent: () =>
       import('./pages/usuarios/usuarios.component').then(m => m.UsuariosComponent)
+  },
+  {
+    path: 'auditoria',
+    canActivate: [authGuard, adminGuard],
+    loadComponent: () =>
+      import('./pages/auditoria/auditoria.component').then(m => m.AuditoriaComponent)
+  },
+  {
+    path: 'alertas',
+    canActivate: [authGuard, adminGuard],
+    loadComponent: () =>
+      import('./pages/alertas/alertas.component').then(m => m.AlertasComponent)
   },
   {
     path: 'cuentas',
@@ -53,10 +70,20 @@ export const routes: Routes = [
       import('./pages/transacciones/transacciones.component').then(m => m.TransaccionesComponent)
   },
   {
+    path: 'transacciones/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/transacciones/transaccion-detalle.component').then(m => m.TransaccionDetalleComponent)
+  },
+  {
     path: 'prestamos',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/prestamos/prestamos.component').then(m => m.PrestamosComponent)
+  },
+  {
+    path: 'prestamos/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/prestamos/prestamo-detalle.component').then(m => m.PrestamoDetalleComponent)
   },
   { path: '**', redirectTo: 'login' }
 ];

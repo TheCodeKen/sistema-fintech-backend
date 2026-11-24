@@ -19,10 +19,13 @@ public class PrestamoRequest {
 
     @NotNull(message = "El monto solicitado es obligatorio")
     @DecimalMin(value = "500.00", message = "El monto mínimo es S/ 500.00")
+    @jakarta.validation.constraints.Digits(integer=13,fraction=2)
     private BigDecimal montoSolicitado;
 
     @NotNull(message = "La tasa de interés es obligatoria")
     @DecimalMin(value = "1.00", message = "La tasa mínima es 1%")
+    @jakarta.validation.constraints.DecimalMax("100.00")
+    @jakarta.validation.constraints.Digits(integer=3,fraction=2)
     private BigDecimal tasaInteres;
 
     @NotNull(message = "El plazo en meses es obligatorio")
@@ -34,5 +37,4 @@ public class PrestamoRequest {
     private Prestamo.TipoPrestamo tipoPrestamo;
 
     private String moneda;
-    private Prestamo.EstadoPrestamo estado;
 }

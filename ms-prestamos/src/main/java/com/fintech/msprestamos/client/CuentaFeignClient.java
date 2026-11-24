@@ -4,6 +4,8 @@ import com.fintech.msprestamos.dto.CuentaClientDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PutMapping;
 
 /**
  * ★ FeignClient → ms-cuentas (Puerto 8082) ★
@@ -25,4 +27,7 @@ public interface CuentaFeignClient {
      */
     @GetMapping("/api/cuentas/{id}")
     CuentaClientDTO obtenerCuentaPorId(@PathVariable("id") Long id);
+
+    @PutMapping("/api/cuentas/{id}/saldo")
+    CuentaClientDTO actualizarSaldo(@PathVariable("id") Long id, @RequestParam("delta") java.math.BigDecimal delta);
 }

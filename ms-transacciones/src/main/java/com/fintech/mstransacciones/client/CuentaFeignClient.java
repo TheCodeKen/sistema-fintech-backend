@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.math.BigDecimal;
 
@@ -16,6 +17,8 @@ import java.math.BigDecimal;
  */
 @FeignClient(name = "ms-cuentas-txn", url = "${feign.client.ms-cuentas.url}")
 public interface CuentaFeignClient {
+    @org.springframework.web.bind.annotation.PostMapping("/api/cuentas/internal/movimientos")
+    void aplicar(@org.springframework.web.bind.annotation.RequestBody com.fintech.mstransacciones.dto.MovimientoRequest request);
 
     /**
      * Obtiene datos de la cuenta (incluyendo saldo) desde ms-cuentas.
@@ -25,6 +28,12 @@ public interface CuentaFeignClient {
     CuentaClientDTO obtenerCuentaPorId(@PathVariable("id") Long id);
 
     /**
+     * Busca una cuenta por el número que el cliente utiliza para transferir.
+     */
+    @GetMapping("/api/cuentas/numero/{numeroCuenta}")
+    CuentaClientDTO obtenerCuentaPorNumero(@PathVariable("numeroCuenta") String numeroCuenta);
+
+    /**
      * Ajusta el saldo de la cuenta en ms-cuentas.
      * delta negativo = descuenta; delta positivo = abona.
      */
@@ -32,4 +41,7 @@ public interface CuentaFeignClient {
     void actualizarSaldo(
             @PathVariable("id") Long id,
             @RequestParam("delta") BigDecimal delta);
+
+    @PatchMapping("/api/cuentas/{id}/bloquear")
+    CuentaClientDTO bloquearCuenta(@PathVariable("id") Long id, @RequestParam("motivo") String motivo);
 }

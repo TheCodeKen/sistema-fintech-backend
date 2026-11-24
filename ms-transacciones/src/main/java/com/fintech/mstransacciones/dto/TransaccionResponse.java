@@ -13,6 +13,9 @@ public class TransaccionResponse {
     private Long id;
     private Long cuentaOrigenId;
     private Long cuentaDestinoId;
+    private Long transaccionPadreId;
+    private String numeroCuentaOrigen;
+    private String numeroCuentaDestino;
     private String tipoTransaccion;
     private BigDecimal monto;
     private String moneda;
@@ -26,6 +29,7 @@ public class TransaccionResponse {
                 .id(t.getId())
                 .cuentaOrigenId(t.getCuentaOrigenId())
                 .cuentaDestinoId(t.getCuentaDestinoId())
+                .transaccionPadreId(t.getTransaccionPadreId())
                 .tipoTransaccion(t.getTipoTransaccion().name())
                 .monto(t.getMonto())
                 .moneda(t.getMoneda())

@@ -22,12 +22,18 @@ public class PrestamoResponse {
     private BigDecimal tasaInteres;
     private Integer plazoMeses;
     private BigDecimal cuotaMensual;
+    private BigDecimal saldoPendiente;
     private String tipoPrestamo;
     private String estado;
     private String moneda;
     private LocalDateTime fechaSolicitud;
     private LocalDateTime fechaAprobacion;
     private LocalDate fechaVencimiento;
+    private LocalDate fechaDesembolso;
+    private LocalDateTime fechaCancelacion;
+    private String motivoCancelacion;
+    private String observacion;
+    private String motivoRechazo;
 
     public static PrestamoResponse from(Prestamo p) {
         return PrestamoResponse.builder()
@@ -42,12 +48,17 @@ public class PrestamoResponse {
                 .tasaInteres(p.getTasaInteres())
                 .plazoMeses(p.getPlazoMeses())
                 .cuotaMensual(p.getCuotaMensual())
+                .saldoPendiente(p.getSaldoPendiente())
                 .tipoPrestamo(p.getTipoPrestamo().name())
                 .estado(p.getEstado().name())
                 .moneda(p.getMoneda())
                 .fechaSolicitud(p.getFechaSolicitud())
                 .fechaAprobacion(p.getFechaAprobacion())
                 .fechaVencimiento(p.getFechaVencimiento())
+                .fechaDesembolso(p.getFechaDesembolso())
+                .fechaCancelacion(p.getFechaCancelacion()).motivoCancelacion(p.getMotivoCancelacion())
+                .observacion(p.getObservacion())
+                .motivoRechazo(p.getMotivoRechazo())
                 .build();
     }
 }

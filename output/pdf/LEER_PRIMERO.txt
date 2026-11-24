@@ -1,0 +1,36 @@
+FINTECHPRO - MANUAL DE ESTUDIO Y RECONSTRUCCION
+Edicion: 17 de noviembre de 2026.
+
+CONTENIDO
+- FinTechPro_Manual_Completo.pdf: 152 paginas, cinco tomos integrados.
+- FinTechPro_Tomo_01.pdf: arquitectura y puesta en marcha (13 paginas).
+- FinTechPro_Tomo_02.pdf: backend, datos y logica financiera (16 paginas).
+- FinTechPro_Tomo_03.pdf: frontend y experiencia de usuario (12 paginas).
+- FinTechPro_Tomo_04.pdf: IA, eventos y operacion (13 paginas).
+- FinTechPro_Tomo_05.pdf: laboratorios y referencia del codigo (98 paginas).
+
+Los indices tienen enlaces y hay marcadores de navegacion.
+Cada tomo conserva su numeracion local en la version unificada.
+
+RUTA DE ESTUDIO
+Lee los tomos I a IV junto al repositorio. Luego desarrolla las 20 sesiones
+del tomo V en tu copia de laboratorio. Usa su anexo para contratos,
+modelos, migraciones, configuracion y dependencias.
+
+FUENTES EDITABLES
+La carpeta manual_editable contiene los Markdown. herramientas contiene
+los generadores. Para regenerar necesitas situarlos en el repositorio
+original: el anexo se extrae de su codigo propio. No se incluye el .env
+real, bases de datos, dependencias descargadas ni credenciales privadas.
+
+Los ejemplos de clases pueden envolver lineas largas para lectura en PDF.
+Consulta la ruta del archivo original al transcribir codigo. Los comandos
+PowerShell del laboratorio incluyen continuaciones donde corresponden.
+
+VERIFICACION
+Se renderizaron todas las paginas de los tomos y se inspeccionaron las
+laminas de contacto y paginas representativas. Las comprobaciones de
+limites de texto, caracteres, enlaces internos y datos excluidos no
+registraron incidencias. Los resultados de pruebas de la aplicacion son
+los historicos documentados; no se ejecutaron movimientos para producir
+este manual. El perfil fintech-estudio es una guia propuesta de replica.

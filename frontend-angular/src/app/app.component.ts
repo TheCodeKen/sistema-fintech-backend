@@ -3,13 +3,17 @@ import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth.service';
+import { AsistenteComponent } from './components/asistente/asistente.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, CommonModule],
+  imports: [RouterOutlet, NavbarComponent, CommonModule, AsistenteComponent],
   template: `
     <app-navbar *ngIf="auth.isLoggedIn()"></app-navbar>
+    @defer (when auth.isLoggedIn()) {
+      <app-asistente *ngIf="auth.isLoggedIn()"></app-asistente>
+    }
     <main class="main-content" [class.with-nav]="auth.isLoggedIn()">
       <router-outlet></router-outlet>
     </main>

@@ -16,3 +16,8 @@
 # Varios
 .DS_Store
 Thumbs.db
+.env
+.verification/
+__pycache__/
+tmp/pdf-env/
+tmp/pdfs/

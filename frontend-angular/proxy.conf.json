@@ -1,0 +1,26 @@
+{
+  "/api/usuarios": {
+    "target": "http://localhost:8081",
+    "secure": false
+  },
+  "/api/auditoria": {
+    "target": "http://localhost:8085",
+    "secure": false
+  },
+  "/api/cuentas": {
+    "target": "http://localhost:8082",
+    "secure": false
+  },
+  "/api/transacciones": {
+    "target": "http://localhost:8083",
+    "secure": false
+  },
+  "/api/alertas": {
+    "target": "http://localhost:8083",
+    "secure": false
+  },
+  "/api/prestamos": {
+    "target": "http://localhost:8084",
+    "secure": false
+  }
+}

@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { forkJoin, of, Subscription, switchMap, timeout } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { UsuarioService } from '../../services/usuario.service';
@@ -9,6 +10,9 @@ import { AuthService } from '../../services/auth.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { DashboardService } from '../../services/dashboard.service';
+import { AuditoriaService } from '../../services/auditoria.service';
+import { Auditoria, Prestamo, Transaccion } from '../../models/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -29,33 +33,35 @@ import { MatIconModule } from '@angular/material/icon';
 
       <!-- ───── VISTA ADMIN ───── -->
       <ng-container *ngIf="isAdmin">
-        <div class="kpi-grid">
+        <p role="status" *ngIf="cargandoMetricas">Cargando el resumen…</p>
+        <div role="alert" class="form-feedback" *ngIf="errorMetricas">{{errorMetricas}} <button mat-button (click)="cargarDatosAdmin()">Reintentar</button></div>
+        <div class="kpi-grid" *ngIf="!cargandoMetricas && !errorMetricas">
           <mat-card class="kpi-card" routerLink="/usuarios">
             <div class="kpi-icon accent-blue"><mat-icon>group</mat-icon></div>
             <div class="kpi-info">
-              <div class="kpi-value">{{ totalUsuarios }}</div>
-              <div class="kpi-label">Usuarios registrados</div>
+              <div class="kpi-value">{{ usuariosActivos }}</div>
+              <div class="kpi-label">Usuarios activos ({{ usuariosInactivos }} inactivos)</div>
             </div>
           </mat-card>
           <mat-card class="kpi-card" routerLink="/cuentas">
             <div class="kpi-icon accent-violet"><mat-icon>account_balance</mat-icon></div>
             <div class="kpi-info">
-              <div class="kpi-value">{{ totalCuentas }}</div>
-              <div class="kpi-label">Cuentas activas</div>
+              <div class="kpi-value">S/ {{ saldoPen | number:'1.2-2' }}</div>
+              <div class="kpi-label">Custodia PEN · {{ cuentasActivas }} activas</div>
             </div>
           </mat-card>
           <mat-card class="kpi-card" routerLink="/transacciones">
             <div class="kpi-icon accent-emerald"><mat-icon>swap_horiz</mat-icon></div>
             <div class="kpi-info">
-              <div class="kpi-value">{{ totalTransacciones }}</div>
-              <div class="kpi-label">Transacciones</div>
+              <div class="kpi-value">{{ transaccionesHoy }}</div>
+              <div class="kpi-label">Transacciones de hoy</div>
             </div>
           </mat-card>
           <mat-card class="kpi-card">
             <div class="kpi-icon accent-amber"><mat-icon>paid</mat-icon></div>
             <div class="kpi-info">
-              <div class="kpi-value">S/ {{ totalSaldo | number:'1.2-2' }}</div>
-              <div class="kpi-label">Saldo total en cuentas</div>
+              <div class="kpi-value">{{ prestamosPendientes }}</div>
+              <div class="kpi-label">Préstamos pendientes de atención</div>
             </div>
           </mat-card>
         </div>
@@ -67,8 +73,9 @@ import { MatIconModule } from '@angular/material/icon';
               <mat-icon>group</mat-icon>
               <div>
                 <strong>Gestionar Usuarios</strong>
-                <small>Crear, editar y eliminar usuarios del sistema</small>
+                <small>Administrar perfiles, permisos y acceso</small>
               </div>
+
             </a>
             <a routerLink="/cuentas" class="quick-item">
               <mat-icon>account_balance</mat-icon>
@@ -91,20 +98,43 @@ import { MatIconModule } from '@angular/material/icon';
                 <small>Aprobar, rechazar y administrar préstamos</small>
               </div>
             </a>
+            <a routerLink="/auditoria" class="quick-item">
+              <mat-icon>fact_check</mat-icon>
+              <div><strong>Consultar auditoría</strong><small>Revisar eventos sensibles y trazabilidad</small></div>
+            </a>
+          </div>
+        </div>
+
+        <div class="activity-grid">
+          <div class="card">
+            <h2>Últimas transacciones</h2>
+            <p role="alert" *ngIf="errorTransacciones">No pudimos cargar los movimientos recientes. <button mat-button (click)="cargarDatosAdmin()">Reintentar</button></p>
+            <div *ngFor="let tx of transaccionesRecientes" class="activity-row">
+              <span>{{ tx.tipoTransaccion }}</span><strong>{{ tx.monto | number:'1.2-2' }} {{ tx.moneda }}</strong>
+            </div>
+            <a routerLink="/transacciones">Ver historial completo</a>
+          </div>
+          <div class="card">
+            <h2>Últimos eventos de auditoría</h2>
+            <p role="alert" *ngIf="errorAuditoria">No pudimos cargar la auditoría reciente. <button mat-button (click)="cargarDatosAdmin()">Reintentar</button></p>
+            <div *ngFor="let evento of auditoriasRecientes" class="activity-row">
+              <span>{{ evento.accion }}</span><small>{{ evento.entidadAfectada }}</small>
+            </div>
+            <a routerLink="/auditoria">Ver log completo</a>
           </div>
         </div>
 
         <div class="card" style="margin-top:20px">
-          <h2 style="margin-bottom:16px;font-size:16px;color:#2563eb">Estado de Microservicios</h2>
+          <h2 style="margin-bottom:16px;font-size:16px;color:#2563eb">Disponibilidad de servicios</h2>
           <div class="ms-grid">
             <div class="ms-card" *ngFor="let ms of microservicios">
-              <div class="ms-dot" [class]="ms.ok ? 'dot-ok' : 'dot-err'"></div>
+              <div class="ms-dot" [class]="ms.ok===true ? 'dot-ok' : ms.ok===false ? 'dot-err' : 'dot-pending'"></div>
               <div>
                 <strong>{{ ms.nombre }}</strong>
                 <small>{{ ms.puerto }}</small>
               </div>
-              <span class="badge" [class]="ms.ok ? 'badge-success' : 'badge-danger'">
-                {{ ms.ok ? 'Online' : 'Offline' }}
+              <span class="badge" [class]="ms.ok===true ? 'badge-success' : ms.ok===false ? 'badge-danger' : 'badge-secondary'">
+                {{ ms.ok===true ? 'Disponible' : ms.ok===false ? 'Consulta no disponible' : 'Sin verificar' }}
               </span>
             </div>
           </div>
@@ -113,7 +143,9 @@ import { MatIconModule } from '@angular/material/icon';
 
       <!-- ───── VISTA CLIENTE ───── -->
       <ng-container *ngIf="!isAdmin">
-        <div class="kpi-grid">
+        <p role="status" *ngIf="cargandoCliente">Cargando tus cuentas y movimientos…</p>
+        <div role="alert" class="form-feedback" *ngIf="errorCliente">{{errorCliente}} <button mat-button (click)="cargarDatosCliente()">Reintentar</button></div>
+        <div class="kpi-grid" *ngIf="!cargandoCliente && !errorCliente">
           <mat-card class="kpi-card" routerLink="/cuentas">
             <div class="kpi-icon accent-violet"><mat-icon>account_balance</mat-icon></div>
             <div class="kpi-info">
@@ -125,7 +157,7 @@ import { MatIconModule } from '@angular/material/icon';
             <div class="kpi-icon accent-emerald"><mat-icon>payments</mat-icon></div>
             <div class="kpi-info">
               <div class="kpi-value">S/ {{ miSaldo | number:'1.2-2' }}</div>
-              <div class="kpi-label">Saldo total</div>
+              <div class="kpi-label">Cuentas activas · USD {{miSaldoUsd | number:'1.2-2'}}</div>
             </div>
           </mat-card>
           <mat-card class="kpi-card" routerLink="/transacciones">
@@ -171,6 +203,13 @@ import { MatIconModule } from '@angular/material/icon';
           </div>
         </div>
       </ng-container>
+              <div class="card" *ngIf="!isAdmin && !cargandoCliente && !errorCliente && misPrestamosDetalle.length">
+                <h2>Estado de mis préstamos</h2>
+                <div *ngFor="let prestamo of misPrestamosDetalle" class="activity-row">
+                  <span>{{ prestamo.numeroPrestamo || ('Préstamo #' + prestamo.id) }}</span>
+                  <strong>{{ prestamo.estado }}</strong>
+                </div>
+              </div>
     </div>
   `,
   styles: [`
@@ -258,13 +297,22 @@ import { MatIconModule } from '@angular/material/icon';
     .ms-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .dot-ok  { background: #16a34a; box-shadow: 0 0 0 3px #dcfce7; }
     .dot-err { background: #dc2626; box-shadow: 0 0 0 3px #fee2e2; }
+    .dot-pending { background: #94a3b8; }
+    .activity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .activity-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+    .activity-row small { color: #64748b; }
+    .card h2 { font-size: 16px; margin: 0 0 10px; color: #2563eb; }
+    @media (max-width: 700px) { .activity-grid { grid-template-columns: 1fr; } }
 
     @media (max-width: 900px) {
       .welcome-banner { align-items: flex-start; flex-direction: column; }
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  cargandoMetricas=true;errorMetricas='';errorTransacciones=false;errorAuditoria=false;
+  cargandoCliente=true;errorCliente='';
+  private consultas=new Subscription();
   session = this.auth.getSession();
   get isAdmin(): boolean { return this.session?.rol === 'ADMIN'; }
 
@@ -273,18 +321,32 @@ export class DashboardComponent implements OnInit {
   totalCuentas = 0;
   totalTransacciones = 0;
   totalSaldo = 0;
+  usuariosActivos = 0;
+  usuariosInactivos = 0;
+  saldoPen = 0;
+  saldoUsd = 0;
+  cuentasActivas = 0;
+  transaccionesHoy = 0;
+  montoTransaccionesHoy = 0;
+  prestamosPendientes = 0;
+  transaccionesRecientes: Transaccion[] = [];
+  auditoriasRecientes: Auditoria[] = [];
 
   // Cliente stats
   misCuentas = 0;
   miSaldo = 0;
+  miSaldoUsd = 0;
+  private movimientosCliente = new Set<number>();
   misTransacciones = 0;
   misPrestamos = 0;
+  misPrestamosDetalle: Prestamo[] = [];
 
   microservicios = [
-    { nombre: 'ms-usuarios',      puerto: 'Puerto 8081', ok: false },
-    { nombre: 'ms-cuentas',       puerto: 'Puerto 8082', ok: false },
-    { nombre: 'ms-transacciones', puerto: 'Puerto 8083', ok: false },
-    { nombre: 'ms-prestamos ★ FeignClient', puerto: 'Puerto 8084', ok: false }
+    { nombre: 'Usuarios',      puerto: 'Acceso y perfiles', ok: null as boolean|null },
+    { nombre: 'Cuentas',       puerto: 'Cuentas y saldos', ok: null as boolean|null },
+    { nombre: 'Movimientos', puerto: 'Transferencias y pagos', ok: null as boolean|null },
+    { nombre: 'Préstamos', puerto: 'Solicitudes y cuotas', ok: null as boolean|null },
+    { nombre: 'Auditoría', puerto: 'Historial de operaciones', ok: null as boolean|null }
   ];
 
   constructor(
@@ -292,7 +354,9 @@ export class DashboardComponent implements OnInit {
     private usuarioSvc: UsuarioService,
     private cuentaSvc: CuentaService,
     private transaccionSvc: TransaccionService,
-    private prestamoSvc: PrestamoService
+    private prestamoSvc: PrestamoService,
+    private dashboardSvc: DashboardService,
+    private auditoriaSvc: AuditoriaService
   ) {}
 
   ngOnInit(): void {
@@ -300,47 +364,49 @@ export class DashboardComponent implements OnInit {
   }
 
   cargarDatosAdmin(): void {
-    this.usuarioSvc.getAll().subscribe({
-      next: (u) => { this.totalUsuarios = u.length; this.microservicios[0].ok = true; },
-      error: () => {}
-    });
-    this.cuentaSvc.getAll().subscribe({
-      next: (c) => {
-        this.totalCuentas = c.length;
-        this.totalSaldo = c.reduce((s, cu) => s + (cu.saldo || 0), 0);
-        this.microservicios[1].ok = true;
+    this.consultas.unsubscribe();this.consultas=new Subscription();
+    this.cargandoMetricas=true;this.errorMetricas='';this.errorTransacciones=false;this.errorAuditoria=false;
+    this.transaccionesRecientes=[];this.auditoriasRecientes=[];this.microservicios.forEach(ms=>ms.ok=null);
+    this.consultas.add(this.dashboardSvc.obtenerMetricas().pipe(timeout(15000)).subscribe({
+      next: (m) => {
+        this.usuariosActivos = m.usuarios.activos; this.usuariosInactivos = m.usuarios.inactivos;
+        this.saldoPen = m.cuentas.saldoPen; this.saldoUsd = m.cuentas.saldoUsd;
+        this.cuentasActivas = m.cuentas.porEstado['ACTIVA'] || 0;
+        this.transaccionesHoy = m.transacciones.cantidadHoy; this.montoTransaccionesHoy = m.transacciones.montoHoy;
+        this.prestamosPendientes = m.prestamos.pendientesAtencion;
+        this.microservicios.slice(0,4).forEach(ms => ms.ok = true);this.cargandoMetricas=false;
       },
-      error: () => {}
-    });
-    this.transaccionSvc.getAll().subscribe({
-      next: (t) => { this.totalTransacciones = t.length; this.microservicios[2].ok = true; },
-      error: () => {}
-    });
-    this.prestamoSvc.getAll().subscribe({
-      next: () => { this.microservicios[3].ok = true; },
-      error: () => {}
-    });
+      error: () => {this.cargandoMetricas=false;this.errorMetricas='No pudimos cargar el resumen. Los importes y contadores están pendientes de verificar.';}
+    }));
+    this.consultas.add(this.transaccionSvc.getPage(0, 5).pipe(timeout(15000)).subscribe({
+      next: (page) => { this.transaccionesRecientes = page.content; this.microservicios[2].ok = true; },
+      error: () => {this.errorTransacciones=true;}
+    }));
+    this.consultas.add(this.auditoriaSvc.getPage(0, 5).pipe(timeout(15000)).subscribe({
+      next: (page) => { this.auditoriasRecientes = page.content;this.microservicios[4].ok=true; },
+      error: () => {this.errorAuditoria=true;this.microservicios[4].ok=false;}
+    }));
   }
 
   cargarDatosCliente(): void {
+    this.consultas.unsubscribe();this.consultas=new Subscription();this.cargandoCliente=true;this.errorCliente='';
     const uid = this.session!.usuarioId;
-    this.cuentaSvc.getByUsuario(uid).subscribe({
-      next: (c) => {
+    this.consultas.add(forkJoin({cuentas:this.cuentaSvc.getByUsuario(uid),prestamos:this.prestamoSvc.getByUsuario(uid)}).pipe(
+      switchMap(datos=>{
+        const movimientos=datos.cuentas.length ? forkJoin(datos.cuentas.map(c=>this.transaccionSvc.getByCuenta(c.id!))) : of([] as Transaccion[][]);
+        return forkJoin({datos:of(datos),movimientos});
+      }),timeout(15000)
+    ).subscribe({next:({datos,movimientos})=>{
+        const c=datos.cuentas;
+        const activas = c.filter(cuenta => cuenta.estado === 'ACTIVA');
         this.misCuentas = c.length;
-        this.miSaldo = c.reduce((s, cu) => s + (cu.saldo || 0), 0);
-        // transacciones de todas sus cuentas
-        c.forEach(cuenta => {
-          this.transaccionSvc.getByCuenta(cuenta.id!).subscribe({
-            next: (t) => this.misTransacciones += t.length,
-            error: () => {}
-          });
-        });
-      },
-      error: () => {}
-    });
-    this.prestamoSvc.getByUsuario(uid).subscribe({
-      next: (p) => this.misPrestamos = p.length,
-      error: () => {}
-    });
+        this.miSaldo = activas.filter(cu => cu.moneda === 'PEN').reduce((s, cu) => s + (cu.saldo || 0), 0);
+        this.miSaldoUsd = activas.filter(cu => cu.moneda === 'USD').reduce((s, cu) => s + (cu.saldo || 0), 0);
+        this.movimientosCliente.clear();
+        movimientos.flat().forEach(tx=>this.movimientosCliente.add(tx.id!));this.misTransacciones=this.movimientosCliente.size;
+        this.misPrestamos=datos.prestamos.length;this.misPrestamosDetalle=datos.prestamos;this.cargandoCliente=false;
+      },error:()=>{this.cargandoCliente=false;this.errorCliente='No pudimos completar tu resumen. Reintenta para consultar tus saldos y movimientos.';}
+    }));
   }
+  ngOnDestroy():void {this.consultas.unsubscribe();}
 }
